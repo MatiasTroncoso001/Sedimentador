@@ -74,7 +74,7 @@
 
   .field{margin-bottom:1.1rem;}
   .field label{
-    display:flex;justify-content:space-between;align-items:baseline;
+    display:flex;justify-space-between;align-items:baseline;
     font-size:13px;color:var(--muted);margin-bottom:5px;
   }
   .field label span.val{
@@ -129,24 +129,43 @@
   .ref-fields{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.7rem;}
   .ref-fields .field{margin-bottom:0;}
 
+  .btn-download {
+    background-color: #28a745;
+    color: white;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s ease;
+  }
+  .btn-download:hover {
+    background-color: #218838;
+  }
+
   footer{margin-top:2rem;font-size:12px;color:var(--muted);text-align:center;line-height:1.6;}
   footer a{color:var(--water-dark);text-decoration:underline;}
 </style>
 </head>
 <body>
 
-<div style="text-align: right; margin: 10px 20px;">
-  <a href="index.html" 
-     download="Simulador_Sedimentador.html" 
-     onclick="gtag('event', 'descargar_simulador', {'event_category': 'Recursos'});"
-     style="background-color: #28a745; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-    💾 Descargar Código Fuente
-  </a>
-</div>
-
 <div class="wrap">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <p class="eyebrow" style="margin: 0;">Recurso educativo abierto · CC BY-SA 4.0</p>
+    </div>
+    <div>
+      <button class="btn-download" onclick="downloadSourceCode()">
+        💾 Descargar Código Fuente (.html)
+      </button>
+    </div>
+  </div>
 
-  <p class="eyebrow">Recurso educativo abierto · CC BY-SA 4.0</p>
   <h1>Simulador de parámetros de sedimentador circular</h1>
   <p class="subtitle">Ajusta el caudal, el diámetro del sedimentador y la concentración de sólidos de un escenario de operación, y compara la carga superficial (SOR), la carga sobre el vertedero (WLR) y la carga de sólidos (SLR) contra los valores de diseño de referencia.</p>
 
@@ -574,6 +593,19 @@ function calc(){
   updateBar('slr', slr, slrMin, slrMax);
 
   drawPlan(D, wlrSt.cls);
+}
+
+function downloadSourceCode() {
+  const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+  const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Simulador_Sedimentador_UBB.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 [q,d,c,...refs].forEach(el => el.addEventListener('input', calc));
