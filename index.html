@@ -129,7 +129,7 @@
 </style>
 </head>
 <body>
-  <!-- Botón visible en la página para descargar y registrar el evento -->
+
 <div style="text-align: right; margin: 10px 20px;">
   <a href="index.html" 
      download="Simulador_Sedimentador.html" 
@@ -138,6 +138,7 @@
     💾 Descargar Código Fuente
   </a>
 </div>
+
 <div class="wrap">
 
   <p class="eyebrow">Recurso educativo abierto · CC BY-SA 4.0</p>
@@ -314,7 +315,6 @@ function initScene3D(){
 function animate3D(){
   requestAnimationFrame(animate3D);
 
-  // Animación continua del barredor de lodos dentro del cono
   if(scraperGroup){
     scraperGroup.rotation.y += 0.006;
   }
@@ -335,14 +335,14 @@ function drawTank3D(D, wlrStatusCls){
   const wallH = 3.2;
   const hopperH = 2.4;
 
-  // 1. Pared del estanque cilíndrico (con ligera transparencia para ver el interior)
+  // 1. Pared del estanque cilíndrico (Alta transparencia para visibilidad limpia)
   const wallGeo = new THREE.CylinderGeometry(r, r, wallH, 48, 1, true);
   const wallMat = new THREE.MeshStandardMaterial({
     color: 0xC7D6D0, 
     side: THREE.DoubleSide, 
     roughness: 0.8,
     transparent: true,
-    opacity: 0.85
+    opacity: 0.45
   });
   const wall = new THREE.Mesh(wallGeo, wallMat);
   wall.position.y = hopperH + wallH/2;
@@ -350,24 +350,22 @@ function drawTank3D(D, wlrStatusCls){
 
   // 2. Nivel de Agua
   const waterGeo = new THREE.CylinderGeometry(r*0.985, r*0.985, 0.06, 48);
-  const waterMat = new THREE.MeshStandardMaterial({color:0x2E6E8E, roughness:0.25, metalness:0.05, transparent:true, opacity:0.75});
+  const waterMat = new THREE.MeshStandardMaterial({color:0x2E6E8E, roughness:0.25, metalness:0.05, transparent:true, opacity:0.6});
   waterMesh = new THREE.Mesh(waterGeo, waterMat);
   waterMesh.position.y = hopperH + wallH - 0.15;
   tankGroup.add(waterMesh);
 
   // 3. Fondo Cónico (Tolva)
   const hopperGeo = new THREE.CylinderGeometry(r, r*0.12, hopperH, 48, 1, true);
-  const hopperMat = new THREE.MeshStandardMaterial({color:0x9FB3AC, side:THREE.DoubleSide, roughness:0.95});
+  const hopperMat = new THREE.MeshStandardMaterial({color:0x3F5751, side:THREE.DoubleSide, roughness:0.95});
   const hopper = new THREE.Mesh(hopperGeo, hopperMat);
   hopper.position.y = hopperH/2;
   tankGroup.add(hopper);
 
-  // ==========================================
-  // CAMPANA DEFLECTORA EN V (Baffle / Feedwell)
-  // ==========================================
+  // 4. Campana Deflectora Cónica (Feedwell)
   const baffleGroup = new THREE.Group();
   const baffleRadiusTop = r * 0.20;
-  const baffleRadiusBottom = r * 0.32; // Perfil acampanado/inclinado
+  const baffleRadiusBottom = r * 0.32;
   const baffleH = wallH * 0.65;
   
   const baffleGeo = new THREE.CylinderGeometry(baffleRadiusTop, baffleRadiusBottom, baffleH, 32, 1, true);
@@ -377,77 +375,74 @@ function drawTank3D(D, wlrStatusCls){
   baffleGroup.add(baffleMesh);
   tankGroup.add(baffleGroup);
 
-  // ==========================================
-  // BARREDOR DE LODOS (AJUSTADO DENTRO DE LA TOLVA)
-  // ==========================================
+  // 5. Barredor de Lodos (Completamente contenido DENTRO de la tolva)
   scraperGroup = new THREE.Group();
   const scraperMetalMat = new THREE.MeshStandardMaterial({color: 0x111111, metalness: 0.8, roughness: 0.2});
 
   // Eje vertical interno
-  const axisHeight = wallH + hopperH - 0.2;
-  const axisGeo = new THREE.CylinderGeometry(0.08, 0.08, axisHeight, 16);
+  const axisHeight = wallH + hopperH * 0.8;
+  const axisGeo = new THREE.CylinderGeometry(0.06, 0.06, axisHeight, 16);
   const centralAxis = new THREE.Mesh(axisGeo, scraperMetalMat);
-  centralAxis.position.y = axisHeight / 2 + 0.2;
+  centralAxis.position.y = hopperH * 0.4 + axisHeight / 2;
   scraperGroup.add(centralAxis);
 
-  // Brazos raspadores inclinados dentro de la tolva
-  const innerR = r * 0.82; 
-  const slopeAngle = Math.atan2(hopperH, r - r*0.12);
+  // Brazos raspadores inclinados perfectamente ajustados dentro del cono
+  const hopperSlope = Math.atan2(hopperH, r * 0.88);
+  const armLength = Math.sqrt(Math.pow(r * 0.82, 2) + Math.pow(hopperH * 0.82, 2));
 
   [-1, 1].forEach(direction => {
-    const armGeo = new THREE.BoxGeometry(innerR, 0.08, 0.08);
+    const armGeo = new THREE.BoxGeometry(armLength, 0.06, 0.06);
     const arm = new THREE.Mesh(armGeo, scraperMetalMat);
     
-    arm.position.set(direction * (innerR / 2), hopperH * 0.52, 0);
-    arm.rotation.z = -direction * slopeAngle;
+    // Posicionar centro del brazo
+    arm.position.set(direction * (r * 0.41), hopperH * 0.5, 0);
+    arm.rotation.z = -direction * hopperSlope;
     scraperGroup.add(arm);
 
-    // Rastras/paletas apuntando hacia la pared interna del cono
-    const numBlades = 6;
+    // Dientes / Paletas raspadoras apuntando hacia la pared cónica
+    const numBlades = 5;
     for(let i = 1; i <= numBlades; i++) {
-      const bladeGeo = new THREE.BoxGeometry(0.04, 0.18, 0.08);
+      const bladeGeo = new THREE.BoxGeometry(0.04, 0.15, 0.06);
       const blade = new THREE.Mesh(bladeGeo, scraperMetalMat);
-      const frac = i / numBlades;
-      const bx = direction * (innerR * frac * 0.95);
-      const by = (hopperH * 0.95) - (frac * hopperH * 0.8);
+      const frac = i / (numBlades + 1);
+      const bx = direction * (r * 0.82 * frac);
+      const by = hopperH * (0.1 + 0.8 * frac);
       blade.position.set(bx, by, 0);
-      blade.rotation.z = -direction * slopeAngle;
+      blade.rotation.z = -direction * hopperSlope;
       scraperGroup.add(blade);
     }
   });
 
   tankGroup.add(scraperGroup);
 
-  // ==========================================
-  // VERTEDERO EN V (Thomson Notch Weir)
-  // ==========================================
+  // 6. Vertedero perimetral con Dientes en V apuntando hacia ARRIBA ( ^^^^^ )
   const weirGroup = new THREE.Group();
   const weirColor = statusColor(wlrStatusCls);
   const weirMat = new THREE.MeshStandardMaterial({color: weirColor, roughness: 0.4, side: THREE.DoubleSide});
   
   // Anillo de base del vertedero
-  const weirRingGeo = new THREE.CylinderGeometry(r*1.01, r*1.01, 0.2, 48, 1, true);
+  const weirRingGeo = new THREE.CylinderGeometry(r*1.005, r*1.005, 0.15, 48, 1, true);
   const weirRing = new THREE.Mesh(weirRingGeo, weirMat);
-  weirRing.position.y = hopperH + wallH + 0.1;
+  weirRing.position.y = hopperH + wallH + 0.075;
   weirGroup.add(weirRing);
 
-  // Dientes triangulares en V alrededor del perímetro
-  const numNotches = 36;
-  const notchGeo = new THREE.ConeGeometry(0.12, 0.25, 3);
+  // Picos/Dientes triangulares (^^^^)
+  const numNotches = 42;
+  const notchGeo = new THREE.ConeGeometry(0.1, 0.22, 3);
   for(let i = 0; i < numNotches; i++) {
     const angle = (i / numNotches) * Math.PI * 2;
     const notch = new THREE.Mesh(notchGeo, weirMat);
-    notch.rotation.z = Math.PI; // Invertir vertedero triangular
+    notch.rotation.z = 0; // Punta hacia arriba ^
     notch.position.set(
-      Math.cos(angle) * (r * 1.01),
-      hopperH + wallH + 0.2,
-      Math.sin(angle) * (r * 1.01)
+      Math.cos(angle) * (r * 1.005),
+      hopperH + wallH + 0.22,
+      Math.sin(angle) * (r * 1.005)
     );
     weirGroup.add(notch);
   }
   tankGroup.add(weirGroup);
 
-  // 6. Puente de inspección y pasarela
+  // 7. Puente de inspección
   const walkY = hopperH + wallH + 0.65;
   const walkMat = new THREE.MeshStandardMaterial({color:0x8A8176, roughness:0.85});
   const deckGeo = new THREE.BoxGeometry(0.9, 0.12, r*2 + 1.2);
@@ -468,7 +463,7 @@ function drawTank3D(D, wlrStatusCls){
     tankGroup.add(leg);
   });
 
-  // 7. Tubería de alimentación
+  // 8. Tubería de alimentación
   const pipeMat = new THREE.MeshStandardMaterial({color:0x3E6E8A, roughness:0.4, metalness:0.15});
   const pipeY = hopperH + wallH + 1.5;
   const outerX = r + 5;
