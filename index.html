@@ -335,14 +335,14 @@ function drawTank3D(D, wlrStatusCls){
   const wallH = 3.2;
   const hopperH = 2.4;
 
-  // 1. Pared del estanque cilíndrico (Alta transparencia para visibilidad limpia)
+  // 1. Pared del estanque cilíndrico (Opacidad ajustada a 0.72)
   const wallGeo = new THREE.CylinderGeometry(r, r, wallH, 48, 1, true);
   const wallMat = new THREE.MeshStandardMaterial({
     color: 0xC7D6D0, 
     side: THREE.DoubleSide, 
     roughness: 0.8,
     transparent: true,
-    opacity: 0.45
+    opacity: 0.72
   });
   const wall = new THREE.Mesh(wallGeo, wallMat);
   wall.position.y = hopperH + wallH/2;
@@ -350,7 +350,7 @@ function drawTank3D(D, wlrStatusCls){
 
   // 2. Nivel de Agua
   const waterGeo = new THREE.CylinderGeometry(r*0.985, r*0.985, 0.06, 48);
-  const waterMat = new THREE.MeshStandardMaterial({color:0x2E6E8E, roughness:0.25, metalness:0.05, transparent:true, opacity:0.6});
+  const waterMat = new THREE.MeshStandardMaterial({color:0x2E6E8E, roughness:0.25, metalness:0.05, transparent:true, opacity:0.65});
   waterMesh = new THREE.Mesh(waterGeo, waterMat);
   waterMesh.position.y = hopperH + wallH - 0.15;
   tankGroup.add(waterMesh);
@@ -375,7 +375,7 @@ function drawTank3D(D, wlrStatusCls){
   baffleGroup.add(baffleMesh);
   tankGroup.add(baffleGroup);
 
-  // 5. Barredor de Lodos (Completamente contenido DENTRO de la tolva)
+  // 5. Barredor de Lodos (Inclinación corregida hacia arriba para seguir la pared del cono)
   scraperGroup = new THREE.Group();
   const scraperMetalMat = new THREE.MeshStandardMaterial({color: 0x111111, metalness: 0.8, roughness: 0.2});
 
@@ -383,59 +383,60 @@ function drawTank3D(D, wlrStatusCls){
   const axisHeight = wallH + hopperH * 0.8;
   const axisGeo = new THREE.CylinderGeometry(0.06, 0.06, axisHeight, 16);
   const centralAxis = new THREE.Mesh(axisGeo, scraperMetalMat);
-  centralAxis.position.y = hopperH * 0.4 + axisHeight / 2;
+  centralAxis.position.y = hopperH * 0.3 + axisHeight / 2;
   scraperGroup.add(centralAxis);
 
-  // Brazos raspadores inclinados perfectamente ajustados dentro del cono
-  const hopperSlope = Math.atan2(hopperH, r * 0.88);
-  const armLength = Math.sqrt(Math.pow(r * 0.82, 2) + Math.pow(hopperH * 0.82, 2));
+  // Geometría de los brazos
+  const targetR = r * 0.72; // Reducido para evitar salientes
+  const slopeAngle = Math.atan2(hopperH * 0.85, targetR);
+  const armLen = Math.sqrt(Math.pow(targetR, 2) + Math.pow(hopperH * 0.85, 2));
 
   [-1, 1].forEach(direction => {
-    const armGeo = new THREE.BoxGeometry(armLength, 0.06, 0.06);
+    const armGeo = new THREE.BoxGeometry(armLen, 0.06, 0.06);
     const arm = new THREE.Mesh(armGeo, scraperMetalMat);
     
-    // Posicionar centro del brazo
-    arm.position.set(direction * (r * 0.41), hopperH * 0.5, 0);
-    arm.rotation.z = -direction * hopperSlope;
+    // Posición del centro del brazo con pendiente positiva
+    arm.position.set(direction * (targetR / 2), hopperH * 0.52, 0);
+    arm.rotation.z = direction * slopeAngle; // Inclinación ascendente (+Z / -Z)
     scraperGroup.add(arm);
 
-    // Dientes / Paletas raspadoras apuntando hacia la pared cónica
-    const numBlades = 5;
+    // Dientes / Paletas raspadoras apuntando verticalmente sobre la pendiente
+    const numBlades = 6;
     for(let i = 1; i <= numBlades; i++) {
-      const bladeGeo = new THREE.BoxGeometry(0.04, 0.15, 0.06);
+      const bladeGeo = new THREE.BoxGeometry(0.04, 0.16, 0.06);
       const blade = new THREE.Mesh(bladeGeo, scraperMetalMat);
       const frac = i / (numBlades + 1);
-      const bx = direction * (r * 0.82 * frac);
-      const by = hopperH * (0.1 + 0.8 * frac);
+      const bx = direction * (targetR * frac);
+      const by = (hopperH * 0.12) + (frac * hopperH * 0.8);
       blade.position.set(bx, by, 0);
-      blade.rotation.z = -direction * hopperSlope;
+      blade.rotation.z = direction * slopeAngle;
       scraperGroup.add(blade);
     }
   });
 
   tankGroup.add(scraperGroup);
 
-  // 6. Vertedero perimetral con Dientes en V apuntando hacia ARRIBA ( ^^^^^ )
+  // 6. Vertedero perimetral (Aumentado a 72 triángulos en V)
   const weirGroup = new THREE.Group();
   const weirColor = statusColor(wlrStatusCls);
   const weirMat = new THREE.MeshStandardMaterial({color: weirColor, roughness: 0.4, side: THREE.DoubleSide});
   
-  // Anillo de base del vertedero
-  const weirRingGeo = new THREE.CylinderGeometry(r*1.005, r*1.005, 0.15, 48, 1, true);
+  // Anillo base del vertedero
+  const weirRingGeo = new THREE.CylinderGeometry(r*1.005, r*1.005, 0.15, 64, 1, true);
   const weirRing = new THREE.Mesh(weirRingGeo, weirMat);
   weirRing.position.y = hopperH + wallH + 0.075;
   weirGroup.add(weirRing);
 
-  // Picos/Dientes triangulares (^^^^)
-  const numNotches = 42;
-  const notchGeo = new THREE.ConeGeometry(0.1, 0.22, 3);
+  // 72 Dientes triangulares en V (^^^^)
+  const numNotches = 72;
+  const notchGeo = new THREE.ConeGeometry(0.08, 0.2, 3);
   for(let i = 0; i < numNotches; i++) {
     const angle = (i / numNotches) * Math.PI * 2;
     const notch = new THREE.Mesh(notchGeo, weirMat);
-    notch.rotation.z = 0; // Punta hacia arriba ^
+    notch.rotation.z = 0; 
     notch.position.set(
       Math.cos(angle) * (r * 1.005),
-      hopperH + wallH + 0.22,
+      hopperH + wallH + 0.2,
       Math.sin(angle) * (r * 1.005)
     );
     weirGroup.add(notch);
