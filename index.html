@@ -192,6 +192,31 @@
 
   footer{margin-top:2rem;font-size:12px;color:var(--muted);text-align:center;line-height:1.6;}
   footer a{color:var(--water-dark);text-decoration:underline;}
+
+  .video-embed{
+    position:relative;width:100%;padding-bottom:56.25%;height:0;
+    border-radius:8px;overflow:hidden;border:1px solid var(--line);
+  }
+  .video-embed iframe{
+    position:absolute;top:0;left:0;width:100%;height:100%;border:0;
+  }
+
+  .eq-card{margin-top:1.5rem;}
+  .eq-row{
+    display:grid;grid-template-columns:120px 1fr;gap:1rem;align-items:center;
+    padding:.8rem 0;border-bottom:1px solid var(--line);
+  }
+  .eq-row:last-child{border-bottom:none;}
+  .eq-name{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;}
+  .eq-name small{display:block;font-family:'IBM Plex Mono',monospace;font-weight:400;color:var(--muted);font-size:11px;margin-top:2px;}
+  .eq-formula{
+    font-family:'IBM Plex Mono',monospace;font-size:13.5px;color:var(--ink);
+    background:#FBFCFB;border:1px solid var(--line);border-radius:6px;
+    padding:.6rem .8rem;line-height:1.8;overflow-x:auto;white-space:nowrap;
+  }
+  .eq-formula .op{color:var(--muted);}
+  .eq-formula .num{color:var(--water-dark);font-weight:500;}
+  .eq-formula .res{color:var(--moss);font-weight:600;}
 </style>
 </head>
 <body>
@@ -222,6 +247,32 @@
 
   <h1>Simulador de parámetros de sedimentador circular</h1>
   <p class="subtitle">Ajusta el caudal, el diámetro del sedimentador y la concentración de sólidos de un escenario de operación, y compara la carga superficial (SOR), la carga sobre el vertedero (WLR) y la carga de sólidos (SLR) contra los valores de diseño de referencia.</p>
+
+  <div class="card" style="margin-bottom:1.5rem;">
+    <h2>¿Qué es un sedimentador circular?</h2>
+    <p style="font-size:14px;line-height:1.65;color:var(--ink);margin:0 0 .9rem;">
+      Un sedimentador secundario circular es una unidad de tratamiento de aguas residuales que separa los sólidos suspendidos (biomasa/lodo) del agua tratada mediante gravedad. El agua con sólidos —el licor mezclado proveniente del reactor biológico— ingresa por un pozo central, pierde velocidad al distribuirse radialmente, y los sólidos decantan hacia el fondo cónico mientras el agua clarificada rebalsa por un vertedero perimetral hacia la salida.
+    </p>
+    <p style="font-size:14px;line-height:1.65;color:var(--ink);margin:0 0 .9rem;">
+      El diseño de estas unidades no es arbitrario: si el caudal es muy alto para el área disponible, los sólidos no alcanzan a decantar y salen con el efluente (falla por arrastre). Si el vertedero recibe más caudal por metro lineal del que puede manejar, se generan corrientes ascendentes que resuspenden sólidos ya decantados. Por eso el diseño se valida contra tres cargas de referencia:
+    </p>
+    <ul style="font-size:13.5px;line-height:1.7;color:var(--ink);margin:0 0 1rem;padding-left:1.2rem;">
+      <li><strong>SOR</strong> (Surface Overflow Rate / carga superficial): cuánto caudal recibe cada m² de área de decantación.</li>
+      <li><strong>WLR</strong> (Weir Loading Rate / carga del vertedero): cuánto caudal rebalsa por cada metro lineal de vertedero.</li>
+      <li><strong>SLR</strong> (Solids Loading Rate / carga de sólidos): cuánta masa de sólidos llega por m² de área, relevante para no saturar la capacidad de espesamiento del fondo.</li>
+    </ul>
+
+    <div class="video-embed">
+      <iframe
+        src="https://www.youtube.com/embed/VIDEO_ID_AQUI"
+        title="Partes de un sedimentador circular"
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen>
+      </iframe>
+    </div>
+    <p class="hint" style="margin-top:.5rem;">Video explicativo de las partes del sedimentador (pozo central, deflector, vertedero, rastras de fondo, poza de lodos). Reemplaza <code>VIDEO_ID_AQUI</code> en el código fuente por el ID de tu video de YouTube (la parte después de <code>watch?v=</code> en la URL).</p>
+  </div>
 
   <div class="grid">
 
@@ -299,6 +350,22 @@
             <div class="bar-labels"><span id="slrMinLbl">70</span><span id="slrMaxLbl">140</span></div>
           </div>
 
+        </div>
+      </div>
+
+      <div class="card eq-card">
+        <h2>Ecuaciones en vivo</h2>
+        <div class="eq-row">
+          <div class="eq-name">SOR<small>Carga superficial</small></div>
+          <div class="eq-formula" id="eqSor"></div>
+        </div>
+        <div class="eq-row">
+          <div class="eq-name">WLR<small>Carga de vertedero</small></div>
+          <div class="eq-formula" id="eqWlr"></div>
+        </div>
+        <div class="eq-row">
+          <div class="eq-name">SLR<small>Carga de sólidos</small></div>
+          <div class="eq-formula" id="eqSlr"></div>
         </div>
       </div>
     </div>
@@ -639,6 +706,15 @@ function calc(){
   updateBar('sor', sor, sorMin, sorMax);
   updateBar('wlr', wlr, wlrMin, wlrMax);
   updateBar('slr', slr, slrMin, slrMax);
+
+  document.getElementById('eqSor').innerHTML =
+    `SOR = Q / Área <span class="op">=</span> <span class="num">${fmt(Q,0)}</span> <span class="op">/</span> <span class="num">${fmt(area,1)}</span> <span class="op">=</span> <span class="res">${fmt(sor,1)} m³/m²·día</span>`;
+
+  document.getElementById('eqWlr').innerHTML =
+    `WLR = Q / (π·D) <span class="op">=</span> <span class="num">${fmt(Q,0)}</span> <span class="op">/</span> <span class="num">${fmt(perimeter,1)}</span> <span class="op">=</span> <span class="res">${fmt(wlr,1)} m³/m·día</span>`;
+
+  document.getElementById('eqSlr').innerHTML =
+    `SLR = Q·SST / Área <span class="op">=</span> <span class="num">${fmt(Q,0)}</span><span class="op">×</span><span class="num">${fmt(C/1000,2)}</span> <span class="op">/</span> <span class="num">${fmt(area,1)}</span> <span class="op">=</span> <span class="res">${fmt(slr,1)} kg/m²·día</span>`;
 
   drawPlan(D, wlrSt.cls);
 }
