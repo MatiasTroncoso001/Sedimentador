@@ -335,7 +335,7 @@ function drawTank3D(D, wlrStatusCls){
   const wallH = 3.2;
   const hopperH = 2.4;
 
-  // 1. Pared del estanque cilíndrico (Opacidad ajustada a 0.72)
+  // 1. Pared del estanque cilíndrico
   const wallGeo = new THREE.CylinderGeometry(r, r, wallH, 48, 1, true);
   const wallMat = new THREE.MeshStandardMaterial({
     color: 0xC7D6D0, 
@@ -375,19 +375,17 @@ function drawTank3D(D, wlrStatusCls){
   baffleGroup.add(baffleMesh);
   tankGroup.add(baffleGroup);
 
-  // 5. Barredor de Lodos (Inclinación corregida hacia arriba para seguir la pared del cono)
+  // 5. Barredor de Lodos
   scraperGroup = new THREE.Group();
   const scraperMetalMat = new THREE.MeshStandardMaterial({color: 0x111111, metalness: 0.8, roughness: 0.2});
 
-  // Eje vertical interno
   const axisHeight = wallH + hopperH * 0.8;
   const axisGeo = new THREE.CylinderGeometry(0.06, 0.06, axisHeight, 16);
   const centralAxis = new THREE.Mesh(axisGeo, scraperMetalMat);
   centralAxis.position.y = hopperH * 0.3 + axisHeight / 2;
   scraperGroup.add(centralAxis);
 
-  // Geometría de los brazos
-  const targetR = r * 0.72; // Reducido para evitar salientes
+  const targetR = r * 0.72;
   const slopeAngle = Math.atan2(hopperH * 0.85, targetR);
   const armLen = Math.sqrt(Math.pow(targetR, 2) + Math.pow(hopperH * 0.85, 2));
 
@@ -395,12 +393,10 @@ function drawTank3D(D, wlrStatusCls){
     const armGeo = new THREE.BoxGeometry(armLen, 0.06, 0.06);
     const arm = new THREE.Mesh(armGeo, scraperMetalMat);
     
-    // Posición del centro del brazo con pendiente positiva
     arm.position.set(direction * (targetR / 2), hopperH * 0.52, 0);
-    arm.rotation.z = direction * slopeAngle; // Inclinación ascendente (+Z / -Z)
+    arm.rotation.z = direction * slopeAngle;
     scraperGroup.add(arm);
 
-    // Dientes / Paletas raspadoras apuntando verticalmente sobre la pendiente
     const numBlades = 6;
     for(let i = 1; i <= numBlades; i++) {
       const bladeGeo = new THREE.BoxGeometry(0.04, 0.16, 0.06);
@@ -416,18 +412,16 @@ function drawTank3D(D, wlrStatusCls){
 
   tankGroup.add(scraperGroup);
 
-  // 6. Vertedero perimetral (Aumentado a 72 triángulos en V)
+  // 6. Vertedero perimetral (Triángulos V-notch)
   const weirGroup = new THREE.Group();
   const weirColor = statusColor(wlrStatusCls);
   const weirMat = new THREE.MeshStandardMaterial({color: weirColor, roughness: 0.4, side: THREE.DoubleSide});
   
-  // Anillo base del vertedero
   const weirRingGeo = new THREE.CylinderGeometry(r*1.005, r*1.005, 0.15, 64, 1, true);
   const weirRing = new THREE.Mesh(weirRingGeo, weirMat);
   weirRing.position.y = hopperH + wallH + 0.075;
   weirGroup.add(weirRing);
 
-  // 72 Dientes triangulares en V (^^^^)
   const numNotches = 72;
   const notchGeo = new THREE.ConeGeometry(0.08, 0.2, 3);
   for(let i = 0; i < numNotches; i++) {
@@ -443,7 +437,44 @@ function drawTank3D(D, wlrStatusCls){
   }
   tankGroup.add(weirGroup);
 
-  // 7. Puente de inspección
+  // 7. Canaleta de Efluente Perimetral y Tubería de Salida de Efluente
+  const troughMat = new THREE.MeshStandardMaterial({color: 0x2E6E8E, roughness: 0.3, transparent: true, opacity: 0.85});
+  const troughOuterRadius = r * 1.12;
+  const troughGeo = new THREE.CylinderGeometry(troughOuterRadius, troughOuterRadius, 0.35, 48, 1, true);
+  const troughMesh = new THREE.Mesh(troughGeo, troughMat);
+  troughMesh.position.y = hopperH + wallH - 0.1;
+  tankGroup.add(troughMesh);
+
+  // Tubería de salida del efluente
+  const effluentPipeMat = new THREE.MeshStandardMaterial({color: 0x1B4B63, roughness: 0.4});
+  const effluentPipeGeo = new THREE.CylinderGeometry(0.18, 0.18, r * 0.45, 16);
+  const effluentPipe = new THREE.Mesh(effluentPipeGeo, effluentPipeMat);
+  effluentPipe.rotation.z = Math.PI / 2;
+  effluentPipe.position.set(-(r * 1.25), hopperH + wallH - 0.2, 0);
+  tankGroup.add(effluentPipe);
+
+  // 8. Tubería de Purga de Lodos (Fondo inferior)
+  const sludgePipeMat = new THREE.MeshStandardMaterial({color: 0x2B2523, roughness: 0.7});
+  
+  // Tramo vertical desde el fondo del cono
+  const sludgeVertGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.8, 16);
+  const sludgeVert = new THREE.Mesh(sludgeVertGeo, sludgePipeMat);
+  sludgeVert.position.set(0, -0.4, 0);
+  tankGroup.add(sludgeVert);
+
+  // Codo de purga de lodo
+  const sludgeElbow = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), sludgePipeMat);
+  sludgeElbow.position.set(0, -0.8, 0);
+  tankGroup.add(sludgeElbow);
+
+  // Tramo horizontal de extracción de lodos
+  const sludgeHorizGeo = new THREE.CylinderGeometry(0.15, 0.15, r * 1.3, 16);
+  const sludgeHoriz = new THREE.Mesh(sludgeHorizGeo, sludgePipeMat);
+  sludgeHoriz.rotation.z = Math.PI / 2;
+  sludgeHoriz.position.set(r * 0.65, -0.8, 0);
+  tankGroup.add(sludgeHoriz);
+
+  // 9. Puente de inspección
   const walkY = hopperH + wallH + 0.65;
   const walkMat = new THREE.MeshStandardMaterial({color:0x8A8176, roughness:0.85});
   const deckGeo = new THREE.BoxGeometry(0.9, 0.12, r*2 + 1.2);
@@ -464,7 +495,7 @@ function drawTank3D(D, wlrStatusCls){
     tankGroup.add(leg);
   });
 
-  // 8. Tubería de alimentación
+  // 10. Tubería de alimentación
   const pipeMat = new THREE.MeshStandardMaterial({color:0x3E6E8A, roughness:0.4, metalness:0.15});
   const pipeY = hopperH + wallH + 1.5;
   const outerX = r + 5;
