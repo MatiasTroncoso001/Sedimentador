@@ -4,13 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- 
-  =============================================================================
-  LICENCIA REA (Recurso Educativo Abierto):
+  LICENCIA REA:
   Esta obra está bajo una licencia Creative Commons Atribución-CompartirIgual 4.0 Internacional (CC BY-SA 4.0).
-  Usted es libre de: Compartir, copiar, redistribuir, adaptar y remezclar este material bajo los mismos términos.
-  Atribución: Debe dar crédito de manera adecuada a los autores (Programa STEAM, Universidad del Bío-Bío).
   Para ver una copia de esta licencia, visite: https://creativecommons.org/licenses/by-sa/4.0/deed.es
-  =============================================================================
 -->
 <title>Simulador de sedimentador circular — SOR · WLR · SLR</title>
 <style>
@@ -30,16 +26,7 @@
     --amber:#B8862B;
     --amber-bg:#F6EDDA;
     --muted:#5B6B67;
-
-    /* === PASO 1: AQUÍ PEGUÉ TU CÓDIGO BASE64 === */
-    /* He usado tu código como '--logo-institucional'. Si tienes el segundo logo, */
-    /* conviértelo también y pégalo en '--logo-steam' de la misma forma. */
-    --logo-institucional: url(data:image/png;base64,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);
-    
-    /* Si consigues el logo de STEAM, descomenta la línea de abajo y pega el código allí */
-    /* --logo-steam: url(data:image/png;base64, ... ); */
   }
-
   *{box-sizing:border-box;}
   body{
     margin:0;
@@ -144,57 +131,10 @@
 
   footer{margin-top:2rem;font-size:12px;color:var(--muted);text-align:center;line-height:1.6;}
   footer a{color:var(--water-dark);text-decoration:underline;}
-
-  /* === PASO 2: ESTILOS CSS PARA LOS LOGOS === */
-  .logo-container {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem; /* Espacio entre logos */
-  }
-  
-  /* Alineación específica para cabecera y pie */
-  .header-logos {
-    justify-content: flex-end; /* A la derecha en la cabecera */
-    margin-bottom: 1rem;
-  }
-  .footer-logos {
-    justify-content: center; /* Centrados en el pie de página */
-    margin-top: 1.2rem;
-    margin-bottom: 1rem;
-  }
-
-  /* Clase base para los cuadros de logo */
-  .logo-box {
-    height: 52px; /* Altura fija para alinearlos */
-    width: 140px;  /* Ancho sugerido, ajústalo según tu imagen */
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: contain; /* Asegura que el logo se vea completo */
-  }
-
-  /* Usamos las variables definidas en :root */
-  .logo-ubb {
-    background-image: var(--logo-institucional);
-  }
-
-  /* Si tuvieras el segundo logo, usarías esta clase */
-  .logo-steam {
-    background-image: var(--logo-steam);
-    /* width: 120px; */ /* Ajuste de ancho opcional para el segundo logo */
-  }
-
-  /* Responsive: centrar logos en pantallas pequeñas */
-  @media(max-width:600px){
-    .logo-container {
-      justify-content: center;
-      flex-wrap: wrap; /* Por si son muy anchos */
-    }
-  }
 </style>
 </head>
 <body>
 
-<!-- Barra de Descarga -->
 <div style="text-align: right; margin: 10px 20px;">
   <a href="index.html" 
      download="Simulador_Sedimentador.html" 
@@ -205,16 +145,6 @@
 </div>
 
 <div class="wrap">
-
-  <!-- === PASO 3: ESTRUCTURA HTML DE LOGOS EN CABECERA === -->
-  <div class="logo-container header-logos">
-    <!-- Cuadro para el logo de la UBB -->
-    <div class="logo-box logo-ubb" title="Universidad del Bío-Bío"></div>
-    
-    <!-- Cuadro para el logo STEAM (descomenta si lo tienes) -->
-    <!-- <div class="logo-box logo-steam" title="Programa STEAM UBB"></div> -->
-  </div>
-  <!-- ================================================== -->
 
   <p class="eyebrow">Recurso educativo abierto · CC BY-SA 4.0</p>
   <h1>Simulador de parámetros de sedimentador circular</h1>
@@ -303,14 +233,6 @@
   </div>
 
   <footer>
-    <!-- === PASO 4: ESTRUCTURA HTML DE LOGOS EN PIE DE PÁGINA === -->
-    <div class="logo-container footer-logos">
-      <!-- Mismos cuadros de logo -->
-      <div class="logo-box logo-ubb" title="Universidad del Bío-Bío"></div>
-      <!-- <div class="logo-box logo-steam" title="Programa STEAM UBB"></div> -->
-    </div>
-    <!-- ======================================================== -->
-
     <p>
       <strong>Simulador de sedimentador circular</strong> — Desarrollado para el Programa STEAM, Universidad del Bío-Bío.<br>
       Esta obra está bajo una licencia 
@@ -319,7 +241,7 @@
       </a>.
     </p>
     <p style="font-size: 10.5px; opacity: 0.8;">
-      Ecuaciones: SOR = Q / Área superficial · WLR = Q / Longitud de vertedero perimetral · SLR = Q × SST / Área superficial
+      SOR = Q / Área superficial · WLR = Q / Longitud de vertedero perimetral · SLR = Q × SST / Área superficial
     </p>
   </footer>
 
@@ -415,4 +337,247 @@ function animate3D(){
 }
 
 function statusColor(cls){
-  return cls==='status-high'
+  return cls==='status-high' ? 0xB54834 : (cls==='status-low' ? 0xB8862B : 0x3F7D5C);
+}
+
+function drawTank3D(D, wlrStatusCls){
+  while(tankGroup.children.length) tankGroup.remove(tankGroup.children[0]);
+
+  const scale = 9 / 20;
+  const r = Math.max(3.2, D*scale);
+  const wallH = 3.2;
+  const hopperH = 2.4;
+
+  // 1. Pared del estanque cilíndrico
+  const wallGeo = new THREE.CylinderGeometry(r, r, wallH, 48, 1, true);
+  const wallMat = new THREE.MeshStandardMaterial({
+    color: 0xC7D6D0, 
+    side: THREE.DoubleSide, 
+    roughness: 0.8,
+    transparent: true,
+    opacity: 0.72
+  });
+  const wall = new THREE.Mesh(wallGeo, wallMat);
+  wall.position.y = hopperH + wallH/2;
+  tankGroup.add(wall);
+
+  // 2. Nivel de Agua principal
+  const waterGeo = new THREE.CylinderGeometry(r*0.985, r*0.985, 0.06, 48);
+  const waterMat = new THREE.MeshStandardMaterial({color:0x2E6E8E, roughness:0.25, metalness:0.05, transparent:true, opacity:0.65});
+  waterMesh = new THREE.Mesh(waterGeo, waterMat);
+  waterMesh.position.y = hopperH + wallH - 0.15;
+  tankGroup.add(waterMesh);
+
+  // 3. Fondo Cónico (Tolva)
+  const hopperGeo = new THREE.CylinderGeometry(r, r*0.12, hopperH, 48, 1, true);
+  const hopperMat = new THREE.MeshStandardMaterial({color:0x3F5751, side:THREE.DoubleSide, roughness:0.95});
+  const hopper = new THREE.Mesh(hopperGeo, hopperMat);
+  hopper.position.y = hopperH/2;
+  tankGroup.add(hopper);
+
+  // 4. Campana Deflectora Cónica (Feedwell)
+  const baffleGroup = new THREE.Group();
+  const baffleRadiusTop = r * 0.20;
+  const baffleRadiusBottom = r * 0.32;
+  const baffleH = wallH * 0.65;
+  
+  const baffleGeo = new THREE.CylinderGeometry(baffleRadiusTop, baffleRadiusBottom, baffleH, 32, 1, true);
+  const baffleMat = new THREE.MeshStandardMaterial({color: 0x1B4B63, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.3});
+  const baffleMesh = new THREE.Mesh(baffleGeo, baffleMat);
+  baffleMesh.position.y = hopperH + wallH - (baffleH / 2);
+  baffleGroup.add(baffleMesh);
+  tankGroup.add(baffleGroup);
+
+  // 5. Barredor de Lodos (Scraper)
+  scraperGroup = new THREE.Group();
+  const scraperMetalMat = new THREE.MeshStandardMaterial({color: 0x111111, metalness: 0.8, roughness: 0.2});
+
+  const axisHeight = wallH + hopperH * 0.8;
+  const axisGeo = new THREE.CylinderGeometry(0.06, 0.06, axisHeight, 16);
+  const centralAxis = new THREE.Mesh(axisGeo, scraperMetalMat);
+  centralAxis.position.y = hopperH * 0.3 + axisHeight / 2;
+  scraperGroup.add(centralAxis);
+
+  const targetR = r * 0.72;
+  const slopeAngle = Math.atan2(hopperH * 0.85, targetR);
+  const armLen = Math.sqrt(Math.pow(targetR, 2) + Math.pow(hopperH * 0.85, 2));
+
+  [-1, 1].forEach(direction => {
+    const armGeo = new THREE.BoxGeometry(armLen, 0.06, 0.06);
+    const arm = new THREE.Mesh(armGeo, scraperMetalMat);
+    
+    arm.position.set(direction * (targetR / 2), hopperH * 0.52, 0);
+    arm.rotation.z = direction * slopeAngle;
+    scraperGroup.add(arm);
+
+    const numBlades = 6;
+    for(let i = 1; i <= numBlades; i++) {
+      const bladeGeo = new THREE.BoxGeometry(0.04, 0.16, 0.06);
+      const blade = new THREE.Mesh(bladeGeo, scraperMetalMat);
+      const frac = i / (numBlades + 1);
+      const bx = direction * (targetR * frac);
+      const by = (hopperH * 0.12) + (frac * hopperH * 0.8);
+      blade.position.set(bx, by, 0);
+      blade.rotation.z = direction * slopeAngle;
+      scraperGroup.add(blade);
+    }
+  });
+
+  tankGroup.add(scraperGroup);
+
+  // 6. Vertedero perimetral (Weir)
+  const weirGroup = new THREE.Group();
+  const weirColor = statusColor(wlrStatusCls);
+  const weirMat = new THREE.MeshStandardMaterial({color: weirColor, roughness: 0.4, side: THREE.DoubleSide});
+  
+  const weirRingGeo = new THREE.CylinderGeometry(r*0.998, r*0.998, 0.15, 64, 1, true);
+  const weirRing = new THREE.Mesh(weirRingGeo, weirMat);
+  weirRing.position.y = hopperH + wallH + 0.075;
+  weirGroup.add(weirRing);
+
+  const numNotches = 72;
+  const notchGeo = new THREE.ConeGeometry(0.08, 0.2, 3);
+  for(let i = 0; i < numNotches; i++) {
+    const angle = (i / numNotches) * Math.PI * 2;
+    const notch = new THREE.Mesh(notchGeo, weirMat);
+    notch.position.set(
+      Math.cos(angle) * (r * 0.998),
+      hopperH + wallH + 0.2,
+      Math.sin(angle) * (r * 0.998)
+    );
+    weirGroup.add(notch);
+  }
+  tankGroup.add(weirGroup);
+
+  // 7. Canaleta FÍSICA de Efluente
+  const troughWidth = 0.45;
+  const troughOuterR = r + troughWidth;
+  const troughConcreteMat = new THREE.MeshStandardMaterial({color: 0x9EAFA8, roughness: 0.8, side: THREE.DoubleSide});
+  const troughWaterMat = new THREE.MeshStandardMaterial({color: 0x3A8DB5, roughness: 0.2, transparent: true, opacity: 0.85});
+
+  const troughOuterWallGeo = new THREE.CylinderGeometry(troughOuterR, troughOuterR, 0.45, 48, 1, true);
+  const troughOuterWall = new THREE.Mesh(troughOuterWallGeo, troughConcreteMat);
+  troughOuterWall.position.y = hopperH + wallH + 0.025;
+  tankGroup.add(troughOuterWall);
+
+  const troughFloorGeo = new THREE.RingGeometry(r, troughOuterR, 48);
+  const troughFloor = new THREE.Mesh(troughFloorGeo, troughConcreteMat);
+  troughFloor.rotation.x = Math.PI / 2;
+  troughFloor.position.y = hopperH + wallH - 0.2;
+  tankGroup.add(troughFloor);
+
+  const troughWaterGeo = new THREE.RingGeometry(r * 1.002, troughOuterR * 0.98, 48);
+  const troughWater = new THREE.Mesh(troughWaterGeo, troughWaterMat);
+  troughWater.rotation.x = Math.PI / 2;
+  troughWater.position.y = hopperH + wallH - 0.08;
+  tankGroup.add(troughWater);
+
+  const effluentPipeMat = new THREE.MeshStandardMaterial({color: 0x1B4B63, roughness: 0.4});
+  const effluentPipeLen = 1.6;
+  const effluentPipeGeo = new THREE.CylinderGeometry(0.12, 0.12, effluentPipeLen, 16);
+  const effluentPipe = new THREE.Mesh(effluentPipeGeo, effluentPipeMat);
+  effluentPipe.rotation.z = Math.PI / 2;
+  effluentPipe.position.set(-(troughOuterR + effluentPipeLen / 2), hopperH + wallH - 0.08, 0);
+  tankGroup.add(effluentPipe);
+
+  // 8. Tuberías (Entrada y Purga)
+  const pipeMat = new THREE.MeshStandardMaterial({color:0x3E6E8A, roughness:0.4, metalness:0.15});
+  const pipeY = hopperH + wallH + 1.5;
+
+  const horizPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, r*1.6, 20), pipeMat);
+  horizPipe.rotation.z = Math.PI/2;
+  horizPipe.position.set(r*0.8, pipeY, 0);
+  tankGroup.add(horizPipe);
+
+  const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), pipeMat);
+  elbow.position.set(0, pipeY, 0);
+  tankGroup.add(elbow);
+
+  const dropLen = pipeY - (hopperH + wallH*0.6);
+  const vertPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, dropLen, 20), pipeMat);
+  vertPipe.position.set(0, pipeY - dropLen/2, 0);
+  tankGroup.add(vertPipe);
+
+  const sludgePipe = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1.2, 16), pipeMat);
+  sludgePipe.position.set(0, -0.6, 0);
+  tankGroup.add(sludgePipe);
+
+  // 9. Puente de inspección
+  const walkY = hopperH + wallH + 0.65;
+  const walkMat = new THREE.MeshStandardMaterial({color:0x8A8176, roughness:0.85});
+  const deckGeo = new THREE.BoxGeometry(0.9, 0.12, r*2 + 1.2);
+  const deck = new THREE.Mesh(deckGeo, walkMat);
+  deck.position.set(0, walkY, 0);
+  tankGroup.add(deck);
+
+  const railMat = new THREE.MeshStandardMaterial({color:0x6A7C77, roughness:0.6});
+  [-1,1].forEach(side=>{
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.5, r*2 + 1.2), railMat);
+    rail.position.set(side*0.42, walkY + 0.31, 0);
+    tankGroup.add(rail);
+  });
+
+  [-(r), 0, r].forEach(zpos=>{
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, walkY - (hopperH+wallH*0.4), 10), walkMat);
+    leg.position.set(0, (hopperH+wallH*0.4 + walkY)/2, zpos);
+    tankGroup.add(leg);
+  });
+
+  controls3d.target.set(0, hopperH + wallH/2, 0);
+}
+
+function drawPlan(D, wlrStatusCls){
+  if(!scene3d) initScene3D();
+  drawTank3D(D, wlrStatusCls);
+}
+
+function calc(){
+  const Q = parseFloat(q.value);
+  const D = parseFloat(d.value);
+  const C = parseFloat(c.value);
+
+  document.getElementById('qVal').textContent = fmt(Q,0)+' m³/día';
+  document.getElementById('dVal').textContent = fmt(D,1)+' m';
+  document.getElementById('cVal').textContent = fmt(C,0)+' mg/L';
+
+  const area = Math.PI * Math.pow(D/2, 2);
+  const perimeter = Math.PI * D;
+
+  const sor = Q / area;
+  const wlr = Q / perimeter;
+  const slr = (Q * (C/1000)) / area;
+
+  const sorMin = parseFloat(document.getElementById('sorMin').value);
+  const sorMax = parseFloat(document.getElementById('sorMax').value);
+  const wlrMin = parseFloat(document.getElementById('wlrMin').value);
+  const wlrMax = parseFloat(document.getElementById('wlrMax').value);
+  const slrMin = parseFloat(document.getElementById('slrMin').value);
+  const slrMax = parseFloat(document.getElementById('slrMax').value);
+
+  document.getElementById('sorVal').textContent = fmt(sor,1)+' m³/m²·día';
+  document.getElementById('wlrVal').textContent = fmt(wlr,1)+' m³/m·día';
+  document.getElementById('slrVal').textContent = fmt(slr,1)+' kg/m²·día';
+
+  const sorSt = status(sor, sorMin, sorMax);
+  const wlrSt = status(wlr, wlrMin, wlrMax);
+  const slrSt = status(slr, slrMin, slrMax);
+
+  const sorBadge = document.getElementById('sorStatus');
+  sorBadge.className = 'metric-status '+sorSt.cls; sorBadge.textContent = sorSt.label;
+  const wlrBadge = document.getElementById('wlrStatus');
+  wlrBadge.className = 'metric-status '+wlrSt.cls; wlrBadge.textContent = wlrSt.label;
+  const slrBadge = document.getElementById('slrStatus');
+  slrBadge.className = 'metric-status '+slrSt.cls; slrBadge.textContent = slrSt.label;
+
+  updateBar('sor', sor, sorMin, sorMax);
+  updateBar('wlr', wlr, wlrMin, wlrMax);
+  updateBar('slr', slr, slrMin, slrMax);
+
+  drawPlan(D, wlrSt.cls);
+}
+
+[q,d,c,...refs].forEach(el => el.addEventListener('input', calc));
+calc();
+</script>
+</body>
+</html>
