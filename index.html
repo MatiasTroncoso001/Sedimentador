@@ -437,22 +437,38 @@ function drawTank3D(D, wlrStatusCls){
   }
   tankGroup.add(weirGroup);
 
-  // 7. Canaleta de Efluente Adosada al Perímetro Externo (Ajustada pegada a la pared)
-  const troughMat = new THREE.MeshStandardMaterial({color: 0x2E6E8E, roughness: 0.3, transparent: true, opacity: 0.85, side: THREE.DoubleSide});
-  const troughOuterRadius = r * 1.01; // Ajustado muy pegado a la pared exterior
-  const troughHeight = 0.5;
-  const troughGeo = new THREE.CylinderGeometry(troughOuterRadius, troughOuterRadius, troughHeight, 48, 1, true);
-  const troughMesh = new THREE.Mesh(troughGeo, troughMat);
-  troughMesh.position.y = hopperH + wallH - 0.05;
-  tankGroup.add(troughMesh);
+  // 7. Canaleta FÍSICA de Efluente (Estructura de hormigón + Agua)
+  const troughOuterR = r * 1.18;
+  const troughConcreteMat = new THREE.MeshStandardMaterial({color: 0x9EAFA8, roughness: 0.8, side: THREE.DoubleSide});
+  const troughWaterMat = new THREE.MeshStandardMaterial({color: 0x2E6E8E, roughness: 0.2, transparent: true, opacity: 0.7});
+
+  // Pared exterior de la canaleta
+  const troughOuterWallGeo = new THREE.CylinderGeometry(troughOuterR, troughOuterR, 0.5, 48, 1, true);
+  const troughOuterWall = new THREE.Mesh(troughOuterWallGeo, troughConcreteMat);
+  troughOuterWall.position.y = hopperH + wallH + 0.05;
+  tankGroup.add(troughOuterWall);
+
+  // Fondo de la canaleta (Anillo horizontal)
+  const troughFloorGeo = new THREE.RingGeometry(r, troughOuterR, 48);
+  const troughFloor = new THREE.Mesh(troughFloorGeo, troughConcreteMat);
+  troughFloor.rotation.x = Math.PI / 2;
+  troughFloor.position.y = hopperH + wallH - 0.2;
+  tankGroup.add(troughFloor);
+
+  // Agua limpia fluyendo dentro de la canaleta
+  const troughWaterGeo = new THREE.RingGeometry(r * 1.002, troughOuterR * 0.98, 48);
+  const troughWater = new THREE.Mesh(troughWaterGeo, troughWaterMat);
+  troughWater.rotation.x = Math.PI / 2;
+  troughWater.position.y = hopperH + wallH - 0.05;
+  tankGroup.add(troughWater);
 
   // Tubería de salida del efluente clarificado
   const effluentPipeMat = new THREE.MeshStandardMaterial({color: 0x1B4B63, roughness: 0.4});
-  const effluentPipeLen = r * 0.45;
+  const effluentPipeLen = r * 0.5;
   const effluentPipeGeo = new THREE.CylinderGeometry(0.18, 0.18, effluentPipeLen, 16);
   const effluentPipe = new THREE.Mesh(effluentPipeGeo, effluentPipeMat);
   effluentPipe.rotation.z = Math.PI / 2;
-  effluentPipe.position.set(-(troughOuterRadius + effluentPipeLen / 2), hopperH + wallH - 0.15, 0);
+  effluentPipe.position.set(-(troughOuterR + effluentPipeLen / 2), hopperH + wallH - 0.05, 0);
   tankGroup.add(effluentPipe);
 
   // 8. Tubería de Purga de Lodos (Fondo inferior)
