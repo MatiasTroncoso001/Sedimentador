@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- 
+  LICENCIA REA:
+  Esta obra está bajo una licencia Creative Commons Atribución-CompartirIgual 4.0 Internacional (CC BY-SA 4.0).
+  Para ver una copia de esta licencia, visite: https://creativecommons.org/licenses/by-sa/4.0/deed.es
+-->
 <title>Simulador de sedimentador circular — SOR · WLR · SLR</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
@@ -124,8 +129,8 @@
   .ref-fields{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.7rem;}
   .ref-fields .field{margin-bottom:0;}
 
-  footer{margin-top:2rem;font-size:11.5px;color:var(--muted);text-align:center;line-height:1.6;}
-  footer a{color:var(--water-dark);}
+  footer{margin-top:2rem;font-size:12px;color:var(--muted);text-align:center;line-height:1.6;}
+  footer a{color:var(--water-dark);text-decoration:underline;}
 </style>
 </head>
 <body>
@@ -228,8 +233,16 @@
   </div>
 
   <footer>
-    Recurso educativo abierto — Programa STEAM, Universidad del Bío-Bío. Licencia CC BY-SA 4.0.<br>
-    SOR = Q / Área superficial · WLR = Q / Longitud de vertedero perimetral · SLR = Q × SST / Área superficial
+    <p>
+      <strong>Simulador de sedimentador circular</strong> — Desarrollado para el Programa STEAM, Universidad del Bío-Bío.<br>
+      Esta obra está bajo una licencia 
+      <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.es" target="_blank" rel="noopener">
+        Creative Commons Atribución-CompartirIgual 4.0 Internacional (CC BY-SA 4.0)
+      </a>.
+    </p>
+    <p style="font-size: 10.5px; opacity: 0.8;">
+      SOR = Q / Área superficial · WLR = Q / Longitud de vertedero perimetral · SLR = Q × SST / Área superficial
+    </p>
   </footer>
 
 </div>
@@ -277,31 +290,31 @@ function initScene3D(){
 
   scene3d = new THREE.Scene();
   camera3d = new THREE.PerspectiveCamera(38, w/h, 0.1, 200);
-  camera3d.position.set(26, 20, 30);
+  camera3d.position.set(20, 16, 22);
 
   renderer3d = new THREE.WebGLRenderer({antialias:true, alpha:true});
   renderer3d.setSize(w, h);
   renderer3d.setPixelRatio(window.devicePixelRatio);
   container.appendChild(renderer3d.domElement);
 
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x6b7a75, 1.0);
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x6b7a75, 0.95);
   scene3d.add(hemi);
-  const dir = new THREE.DirectionalLight(0xffffff, 0.7);
-  dir.position.set(15, 25, 10);
+  const dir = new THREE.DirectionalLight(0xffffff, 0.65);
+  dir.position.set(12, 20, 8);
   scene3d.add(dir);
 
   controls3d = new THREE.OrbitControls(camera3d, renderer3d.domElement);
   controls3d.enableDamping = true;
   controls3d.dampingFactor = 0.08;
-  controls3d.minDistance = 12;
+  controls3d.minDistance = 8;
   controls3d.maxDistance = 60;
   controls3d.maxPolarAngle = Math.PI * 0.49;
 
   tankGroup = new THREE.Group();
   scene3d.add(tankGroup);
 
-  const grid = new THREE.GridHelper(60, 24, 0xB8C4BF, 0xD3DDD8);
-  grid.position.y = -0.02;
+  const grid = new THREE.GridHelper(30, 20, 0x93A39C, 0xC2CFCB);
+  grid.position.y = -0.01;
   scene3d.add(grid);
 
   animate3D();
@@ -375,7 +388,7 @@ function drawTank3D(D, wlrStatusCls){
   baffleGroup.add(baffleMesh);
   tankGroup.add(baffleGroup);
 
-  // 5. Barredor de Lodos
+  // 5. Barredor de Lodos (Scraper)
   scraperGroup = new THREE.Group();
   const scraperMetalMat = new THREE.MeshStandardMaterial({color: 0x111111, metalness: 0.8, roughness: 0.2});
 
@@ -412,7 +425,7 @@ function drawTank3D(D, wlrStatusCls){
 
   tankGroup.add(scraperGroup);
 
-  // 6. Vertedero perimetral (Triángulos V-notch)
+  // 6. Vertedero perimetral (Weir)
   const weirGroup = new THREE.Group();
   const weirColor = statusColor(wlrStatusCls);
   const weirMat = new THREE.MeshStandardMaterial({color: weirColor, roughness: 0.4, side: THREE.DoubleSide});
@@ -436,58 +449,58 @@ function drawTank3D(D, wlrStatusCls){
   }
   tankGroup.add(weirGroup);
 
-  // 7. Canaleta FÍSICA de Efluente (Más estrecha y con agua visible)
-  const troughWidth = 0.45; // Ancho reducido y proporcional
+  // 7. Canaleta FÍSICA de Efluente
+  const troughWidth = 0.45;
   const troughOuterR = r + troughWidth;
   const troughConcreteMat = new THREE.MeshStandardMaterial({color: 0x9EAFA8, roughness: 0.8, side: THREE.DoubleSide});
   const troughWaterMat = new THREE.MeshStandardMaterial({color: 0x3A8DB5, roughness: 0.2, transparent: true, opacity: 0.85});
 
-  // Pared exterior de la canaleta
   const troughOuterWallGeo = new THREE.CylinderGeometry(troughOuterR, troughOuterR, 0.45, 48, 1, true);
   const troughOuterWall = new THREE.Mesh(troughOuterWallGeo, troughConcreteMat);
   troughOuterWall.position.y = hopperH + wallH + 0.025;
   tankGroup.add(troughOuterWall);
 
-  // Fondo de la canaleta (Anillo horizontal)
   const troughFloorGeo = new THREE.RingGeometry(r, troughOuterR, 48);
   const troughFloor = new THREE.Mesh(troughFloorGeo, troughConcreteMat);
   troughFloor.rotation.x = Math.PI / 2;
   troughFloor.position.y = hopperH + wallH - 0.2;
   tankGroup.add(troughFloor);
 
-  // Agua acumulada/fluyendo en la canaleta (Volumen cilíndrico hueco/anillo)
   const troughWaterGeo = new THREE.RingGeometry(r * 1.002, troughOuterR * 0.98, 48);
   const troughWater = new THREE.Mesh(troughWaterGeo, troughWaterMat);
   troughWater.rotation.x = Math.PI / 2;
   troughWater.position.y = hopperH + wallH - 0.08;
   tankGroup.add(troughWater);
 
-  // Tubería de salida del efluente clarificado
   const effluentPipeMat = new THREE.MeshStandardMaterial({color: 0x1B4B63, roughness: 0.4});
-  const effluentPipeLen = 1.2;
+  const effluentPipeLen = 1.6;
   const effluentPipeGeo = new THREE.CylinderGeometry(0.12, 0.12, effluentPipeLen, 16);
   const effluentPipe = new THREE.Mesh(effluentPipeGeo, effluentPipeMat);
   effluentPipe.rotation.z = Math.PI / 2;
   effluentPipe.position.set(-(troughOuterR + effluentPipeLen / 2), hopperH + wallH - 0.08, 0);
   tankGroup.add(effluentPipe);
 
-  // 8. Tubería de Purga de Lodos (Fondo inferior)
-  const sludgePipeMat = new THREE.MeshStandardMaterial({color: 0x2B2523, roughness: 0.7});
-  
-  const sludgeVertGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.8, 16);
-  const sludgeVert = new THREE.Mesh(sludgeVertGeo, sludgePipeMat);
-  sludgeVert.position.set(0, -0.4, 0);
-  tankGroup.add(sludgeVert);
+  // 8. Tuberías (Entrada y Purga)
+  const pipeMat = new THREE.MeshStandardMaterial({color:0x3E6E8A, roughness:0.4, metalness:0.15});
+  const pipeY = hopperH + wallH + 1.5;
 
-  const sludgeElbow = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), sludgePipeMat);
-  sludgeElbow.position.set(0, -0.8, 0);
-  tankGroup.add(sludgeElbow);
+  const horizPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, r*1.6, 20), pipeMat);
+  horizPipe.rotation.z = Math.PI/2;
+  horizPipe.position.set(r*0.8, pipeY, 0);
+  tankGroup.add(horizPipe);
 
-  const sludgeHorizGeo = new THREE.CylinderGeometry(0.15, 0.15, r * 1.3, 16);
-  const sludgeHoriz = new THREE.Mesh(sludgeHorizGeo, sludgePipeMat);
-  sludgeHoriz.rotation.z = Math.PI / 2;
-  sludgeHoriz.position.set(r * 0.65, -0.8, 0);
-  tankGroup.add(sludgeHoriz);
+  const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), pipeMat);
+  elbow.position.set(0, pipeY, 0);
+  tankGroup.add(elbow);
+
+  const dropLen = pipeY - (hopperH + wallH*0.6);
+  const vertPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, dropLen, 20), pipeMat);
+  vertPipe.position.set(0, pipeY - dropLen/2, 0);
+  tankGroup.add(vertPipe);
+
+  const sludgePipe = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1.2, 16), pipeMat);
+  sludgePipe.position.set(0, -0.6, 0);
+  tankGroup.add(sludgePipe);
 
   // 9. Puente de inspección
   const walkY = hopperH + wallH + 0.65;
@@ -509,27 +522,6 @@ function drawTank3D(D, wlrStatusCls){
     leg.position.set(0, (hopperH+wallH*0.4 + walkY)/2, zpos);
     tankGroup.add(leg);
   });
-
-  // 10. Tubería de alimentación
-  const pipeMat = new THREE.MeshStandardMaterial({color:0x3E6E8A, roughness:0.4, metalness:0.15});
-  const pipeY = hopperH + wallH + 1.5;
-  const outerX = r + 5;
-  const wellX = 0;
-
-  const horizLen = outerX - wellX;
-  const horizPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, horizLen, 20), pipeMat);
-  horizPipe.rotation.z = Math.PI/2;
-  horizPipe.position.set((outerX+wellX)/2, pipeY, 0);
-  tankGroup.add(horizPipe);
-
-  const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), pipeMat);
-  elbow.position.set(wellX, pipeY, 0);
-  tankGroup.add(elbow);
-
-  const dropLen = pipeY - (hopperH + wallH*0.6);
-  const vertPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, dropLen, 20), pipeMat);
-  vertPipe.position.set(wellX, pipeY - dropLen/2, 0);
-  tankGroup.add(vertPipe);
 
   controls3d.target.set(0, hopperH + wallH/2, 0);
 }
