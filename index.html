@@ -36,13 +36,34 @@
     padding:2.5rem 1.5rem;
   }
   .wrap{max-width:980px;margin:0 auto;}
+
+  /* Header Branding */
+  .top-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .brand-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .ubb-logo {
+    height: 48px;
+    width: auto;
+    object-fit: contain;
+  }
+
   .eyebrow{
     font-family:'IBM Plex Mono',monospace;
     font-size:12px;
     letter-spacing:.14em;
     text-transform:uppercase;
     color:var(--water-dark);
-    margin:0 0 6px;
+    margin:0 0 4px;
   }
   h1{
     font-family:'Space Grotesk',sans-serif;
@@ -74,7 +95,7 @@
 
   .field{margin-bottom:1.1rem;}
   .field label{
-    display:flex;justify-space-between;align-items:baseline;
+    display:flex;justify-content:space-between;align-items:baseline;
     font-size:13px;color:var(--muted);margin-bottom:5px;
   }
   .field label span.val{
@@ -155,9 +176,13 @@
 <body>
 
 <div class="wrap">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-    <div>
-      <p class="eyebrow" style="margin: 0;">Recurso educativo abierto · CC BY-SA 4.0</p>
+  <div class="top-header">
+    <div class="brand-container">
+      <img src="https://www.ubiobio.cl/w/images/logo_ubb.png" alt="Universidad del Bío-Bío" class="ubb-logo">
+      <div>
+        <p class="eyebrow">Universidad del Bío-Bío</p>
+        <p class="eyebrow" style="color: var(--muted); font-size: 10.5px;">Recurso educativo abierto · CC BY-SA 4.0</p>
+      </div>
     </div>
     <div>
       <button class="btn-download" onclick="downloadSourceCode()">
@@ -253,7 +278,7 @@
 
   <footer>
     <p>
-      <strong>Simulador de sedimentador circular</strong> — Desarrollado por el Programa STEAM de la Facultad de Ingeniería, Universidad del Bío-Bío.<br>
+      <strong>Simulador de sedimentador circular</strong> — Desarrollado para el Programa STEAM, Universidad del Bío-Bío.<br>
       Esta obra está bajo una licencia 
       <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.es" target="_blank" rel="noopener">
         Creative Commons Atribución-CompartirIgual 4.0 Internacional (CC BY-SA 4.0)
