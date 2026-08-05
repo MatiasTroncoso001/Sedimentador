@@ -539,10 +539,13 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
           <div class="field"><label>SOR máx (m³/m²·día)</label><input type="number" id="sorMax" value="32"></div>
           <div class="field"><label>WLR mín (m³/m·día)</label><input type="number" id="wlrMin" value="80"></div>
           <div class="field"><label>WLR máx (m³/m·día)</label><input type="number" id="wlrMax" value="250"></div>
-          <div class="field"><label>SLR mín (kg/m²·día)</label><input type="number" id="slrMin" value="70"></div>
+          <div class="field"><label>SLR mín (kg/m²·día)</label><input type="number" id="slrMin" value="96"></div>
           <div class="field"><label>SLR máx (kg/m²·día)</label><input type="number" id="slrMax" value="140"></div>
         </div>
         <div class="hint" style="margin-top:.6rem;">Editables por el docente para adaptar a distintos manuales de diseño o normativas locales.</div>
+        <p style="font-size:11px;line-height:1.6;color:var(--muted);margin:.8rem 0 0;padding-top:.7rem;border-top:1px dashed var(--line);">
+          <strong>Fuente:</strong> Metcalf &amp; Eddy / Tchobanoglous, G. et al. (2014). <em>Wastewater Engineering: Treatment and Resource Recovery</em>, 5.ª ed. McGraw-Hill. Rangos de SOR y SLR para sedimentación secundaria posterior a lodos activados convencionales, a caudal medio. El rango de WLR es una compilación de referencias complementarias (WEF, Manual of Practice N.º 8).
+        </p>
       </details>
 
       <div class="divider"></div>
@@ -605,7 +608,7 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
               <span class="metric-value" id="slrVal">—</span>
             </div>
             <div class="bar-track"><div class="bar-range" id="slrRange"></div><div class="bar-fill" id="slrFill"></div></div>
-            <div class="bar-labels"><span id="slrMinLbl">70</span><span id="slrMaxLbl">140</span></div>
+            <div class="bar-labels"><span id="slrMinLbl">96</span><span id="slrMaxLbl">140</span></div>
           </div>
 
         </div>
