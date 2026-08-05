@@ -664,6 +664,7 @@ function updateBar(prefix, val, min, max){
 }
 
 let scene3d, camera3d, renderer3d, controls3d, tankGroup, weirMesh, waterMesh, scraperGroup;
+let flowArrowsGroup;
 
 function initScene3D(){
   const container = document.getElementById('scene3d');
@@ -693,6 +694,8 @@ function initScene3D(){
 
   tankGroup = new THREE.Group();
   scene3d.add(tankGroup);
+  flowArrowsGroup = new THREE.Group();
+  scene3d.add(flowArrowsGroup);
 
   const grid = new THREE.GridHelper(30, 20, 0x93A39C, 0xC2CFCB);
   grid.position.y = -0.01;
@@ -896,8 +899,79 @@ function drawTank3D(D, wlrStatusCls){
   });
 
   controls3d.target.set(0, hopperH + wallH/2, 0);
+drawFlowArrows(D);
 }
+function drawFlowArrows(D){
 
+  if(!flowArrowsGroup) return;
+
+  while(flowArrowsGroup.children.length){
+    flowArrowsGroup.remove(flowArrowsGroup.children[0]);
+  }
+
+
+  const arrowColor = 0x014898;
+
+
+  const material = new THREE.MeshStandardMaterial({
+    color: arrowColor,
+    emissive: arrowColor,
+    emissiveIntensity:0.3
+  });
+
+
+  /*
+  Flecha de alimentación:
+  ingreso radial hacia el pozo central
+  */
+
+  const inletArrow = new THREE.ArrowHelper(
+    new THREE.Vector3(-1,0,0),
+    new THREE.Vector3(8,4,0),
+    5,
+    arrowColor,
+    0.8,
+    0.35
+  );
+
+  flowArrowsGroup.add(inletArrow);
+
+
+
+  /*
+  Flecha salida agua clarificada
+  */
+
+  const outletArrow = new THREE.ArrowHelper(
+    new THREE.Vector3(1,0,0),
+    new THREE.Vector3(-8,6,0),
+    5,
+    0x2E8B57,
+    0.8,
+    0.35
+  );
+
+  flowArrowsGroup.add(outletArrow);
+
+
+
+  /*
+  Flecha descarga de lodos
+  */
+
+  const sludgeArrow = new THREE.ArrowHelper(
+    new THREE.Vector3(0,-1,0),
+    new THREE.Vector3(0,1,0),
+    3,
+    0x8B4513,
+    0.6,
+    0.3
+  );
+
+  flowArrowsGroup.add(sludgeArrow);
+
+
+}
 function drawPlan(D, wlrStatusCls){
   if(!scene3d) initScene3D();
   drawTank3D(D, wlrStatusCls);
