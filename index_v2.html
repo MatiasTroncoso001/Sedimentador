@@ -905,70 +905,71 @@ function drawFlowArrows(D){
 
   if(!flowArrowsGroup) return;
 
+
   while(flowArrowsGroup.children.length){
     flowArrowsGroup.remove(flowArrowsGroup.children[0]);
   }
 
 
-  const arrowColor = 0x014898;
+  /*
+  Escala del modelo:
+  r = D*9/20
+  */
 
-
-  const material = new THREE.MeshStandardMaterial({
-    color: arrowColor,
-    emissive: arrowColor,
-    emissiveIntensity:0.3
-  });
+  const r = Math.max(3.2, D*9/20);
 
 
   /*
-  Flecha de alimentación:
-  ingreso radial hacia el pozo central
+  1) ENTRADA DE ALIMENTACIÓN
+  Corresponde a la tubería superior que entra al pozo central
   */
 
-  const inletArrow = new THREE.ArrowHelper(
-    new THREE.Vector3(-1,0,0),
-    new THREE.Vector3(8,4,0),
-    5,
-    arrowColor,
-    0.8,
-    0.35
-  );
-
-  flowArrowsGroup.add(inletArrow);
-
-
-
-  /*
-  Flecha salida agua clarificada
-  */
-
-  const outletArrow = new THREE.ArrowHelper(
-    new THREE.Vector3(1,0,0),
-    new THREE.Vector3(-8,6,0),
-    5,
-    0x2E8B57,
-    0.8,
-    0.35
-  );
-
-  flowArrowsGroup.add(outletArrow);
-
-
-
-  /*
-  Flecha descarga de lodos
-  */
-
-  const sludgeArrow = new THREE.ArrowHelper(
+  const inlet = new THREE.ArrowHelper(
     new THREE.Vector3(0,-1,0),
-    new THREE.Vector3(0,1,0),
+    new THREE.Vector3(0,8,0),
+    4,
+    0x014898,
+    0.8,
+    0.35
+  );
+
+  flowArrowsGroup.add(inlet);
+
+
+
+  /*
+  2) SALIDA DE AGUA CLARIFICADA
+  Sale desde el canal perimetral hacia afuera
+  */
+
+  const outlet = new THREE.ArrowHelper(
+    new THREE.Vector3(1,0,0),
+    new THREE.Vector3(r+1,5.8,0),
     3,
+    0x2E8B57,
+    0.7,
+    0.3
+  );
+
+  flowArrowsGroup.add(outlet);
+
+
+
+  /*
+  3) DESCARGA DE LODOS
+  Desde la tolva inferior hacia abajo
+  */
+
+  const sludge = new THREE.ArrowHelper(
+    new THREE.Vector3(0,-1,0),
+    new THREE.Vector3(0,-0.5,0),
+    2.5,
     0x8B4513,
     0.6,
     0.3
   );
 
-  flowArrowsGroup.add(sludgeArrow);
+  flowArrowsGroup.add(sludge);
 
 
 }
