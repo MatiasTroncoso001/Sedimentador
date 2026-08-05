@@ -552,6 +552,11 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
         <div class="diagram-box">
           <div id="scene3d" style="width:100%;max-width:520px;height:340px;border-radius:8px;background:#DCE9E4;overflow:hidden;"></div>
         </div>
+        <div style="display:flex;flex-wrap:wrap;gap:.9rem;justify-content:center;margin-top:.8rem;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);">
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#014898;margin-right:5px;vertical-align:middle;"></span>Entrada de alimentación</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#2E8B57;margin-right:5px;vertical-align:middle;"></span>Salida de agua clarificada</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#8B4513;margin-right:5px;vertical-align:middle;"></span>Descarga de lodos</span>
+        </div>
       </div>
 
       <div class="results-grid">
@@ -664,6 +669,8 @@ function updateBar(prefix, val, min, max){
 
 let scene3d, camera3d, renderer3d, controls3d, tankGroup, weirMesh, waterMesh, scraperGroup;
 let flowArrowsGroup;
+let flowMarkers = [];
+let flowTime = 0;
 
 function initScene3D(){
   const container = document.getElementById('scene3d');
@@ -708,12 +715,43 @@ function initScene3D(){
   });
 }
 
+function pointAlongPath(points, t){
+  const segLens = [];
+  let total = 0;
+  for(let i=0;i<points.length-1;i++){
+    const d = points[i].distanceTo(points[i+1]);
+    segLens.push(d);
+    total += d;
+  }
+  let dist = Math.max(0, Math.min(1,t)) * total;
+  for(let i=0;i<segLens.length;i++){
+    if(dist <= segLens[i] || i===segLens.length-1){
+      const segT = segLens[i] ? dist/segLens[i] : 0;
+      const pos = new THREE.Vector3().lerpVectors(points[i], points[i+1], Math.min(1,segT));
+      const dir = new THREE.Vector3().subVectors(points[i+1], points[i]).normalize();
+      return {pos, dir};
+    }
+    dist -= segLens[i];
+  }
+  return {pos: points[points.length-1].clone(), dir: new THREE.Vector3(0,-1,0)};
+}
+
 function animate3D(){
   requestAnimationFrame(animate3D);
 
   if(scraperGroup){
     scraperGroup.rotation.y += 0.006;
   }
+
+  flowTime += 0.006;
+  flowMarkers.forEach(m=>{
+    const t = (flowTime * m.speed + m.phase) % 1;
+    const {pos, dir} = pointAlongPath(m.path, t);
+    m.mesh.position.copy(pos);
+    m.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir);
+    const fade = t < 0.08 ? t/0.08 : (t > 0.92 ? (1-t)/0.08 : 1);
+    m.mesh.material.opacity = 0.15 + 0.85*fade;
+  });
 
   if(controls3d) controls3d.update();
   if(renderer3d) renderer3d.render(scene3d, camera3d);
@@ -848,7 +886,7 @@ function drawTank3D(D, wlrStatusCls){
   troughWater.position.y = hopperH + wallH - 0.08;
   tankGroup.add(troughWater);
 
-  const effluentPipeMat = new THREE.MeshStandardMaterial({color: 0x1B4B63, roughness: 0.4});
+  const effluentPipeMat = new THREE.MeshStandardMaterial({color: 0x1B4B63, roughness: 0.4, transparent:true, opacity:0.35, depthWrite:false});
   const effluentPipeLen = 1.6;
   const effluentPipeGeo = new THREE.CylinderGeometry(0.12, 0.12, effluentPipeLen, 16);
   const effluentPipe = new THREE.Mesh(effluentPipeGeo, effluentPipeMat);
@@ -856,7 +894,7 @@ function drawTank3D(D, wlrStatusCls){
   effluentPipe.position.set(-(troughOuterR + effluentPipeLen / 2), hopperH + wallH - 0.08, 0);
   tankGroup.add(effluentPipe);
 
-  const pipeMat = new THREE.MeshStandardMaterial({color:0x3E6E8A, roughness:0.4, metalness:0.15});
+  const pipeMat = new THREE.MeshStandardMaterial({color:0x3E6E8A, roughness:0.4, metalness:0.15, transparent:true, opacity:0.32, depthWrite:false});
   const pipeY = hopperH + wallH + 1.5;
 
   const horizPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, r*1.6, 20), pipeMat);
@@ -900,76 +938,86 @@ function drawTank3D(D, wlrStatusCls){
   controls3d.target.set(0, hopperH + wallH/2, 0);
 drawFlowArrows(D);
 }
+function makeFlowMarker(color){
+  const geo = new THREE.ConeGeometry(0.22, 0.55, 12);
+  const mat = new THREE.MeshStandardMaterial({color, transparent:true, opacity:1, roughness:0.35, emissive:color, emissiveIntensity:0.25});
+  return new THREE.Mesh(geo, mat);
+}
+
+function addFlowLine(path, color, speed, count){
+  for(let i=0;i<count;i++){
+    const mesh = makeFlowMarker(color);
+    flowArrowsGroup.add(mesh);
+    flowMarkers.push({mesh, path, speed, phase: i/count});
+  }
+}
+
 function drawFlowArrows(D){
 
   if(!flowArrowsGroup) return;
 
-
   while(flowArrowsGroup.children.length){
     flowArrowsGroup.remove(flowArrowsGroup.children[0]);
   }
+  flowMarkers = [];
 
 
   /*
-  Escala del modelo:
+  Escala y geometría del modelo (deben coincidir con drawTank3D):
   r = D*9/20
+  wallH = 3.2, hopperH = 2.4
+  pipeY (codo superior) = hopperH + wallH + 1.5 = 7.1
+  vertPipe llega hasta   = hopperH + wallH*0.6  = 4.32
+  nivel del vertedero    = hopperH + wallH      = 5.6
+  canal perimetral (agua)= hopperH + wallH - 0.08 = 5.52
+  tolva de lodos: ápice en y=0, tubería de purga hasta y=-1.2
   */
 
   const r = Math.max(3.2, D*9/20);
+  const wallH = 3.2;
+  const hopperH = 2.4;
+  const pipeY = hopperH + wallH + 1.5;          // 7.1 — codo del alimentador
+  const vertPipeBottom = hopperH + wallH*0.6;    // 4.32 — extremo inferior del bajante
+  const troughY = hopperH + wallH - 0.08;        // 5.52 — nivel de agua en canal perimetral
+  const troughOuterR = r + 0.45;                 // borde exterior del canal perimetral
 
 
   /*
-  1) ENTRADA DE ALIMENTACIÓN
-  Corresponde a la tubería superior que entra al pozo central
+  1) ENTRADA DE ALIMENTACIÓN (azul)
+  Recorre la tubería completa: llega horizontal desde el exterior,
+  baja por el codo y el bajante vertical hasta el pozo central.
   */
 
-  const inlet = new THREE.ArrowHelper(
-    new THREE.Vector3(0,-1,0),
-    new THREE.Vector3(0,8,0),
-    4,
-    0x014898,
-    0.8,
-    0.35
-  );
-
-  flowArrowsGroup.add(inlet);
-
+  const inletPath = [
+    new THREE.Vector3(r*1.6, pipeY, 0),
+    new THREE.Vector3(0, pipeY, 0),
+    new THREE.Vector3(0, vertPipeBottom, 0)
+  ];
+  addFlowLine(inletPath, 0x014898, 0.22, 3);
 
 
   /*
-  2) SALIDA DE AGUA CLARIFICADA
-  Sale desde el canal perimetral hacia afuera
+  2) SALIDA DE AGUA CLARIFICADA (verde)
+  Recorre el canal perimetral hacia la tubería efluente, del lado -x.
   */
 
-  const outlet = new THREE.ArrowHelper(
-    new THREE.Vector3(1,0,0),
-    new THREE.Vector3(r+1,5.8,0),
-    3,
-    0x2E8B57,
-    0.7,
-    0.3
-  );
-
-  flowArrowsGroup.add(outlet);
-
+  const outletPath = [
+    new THREE.Vector3(-(troughOuterR), troughY, 0),
+    new THREE.Vector3(-(troughOuterR + 2.0), troughY, 0)
+  ];
+  addFlowLine(outletPath, 0x2E8B57, 0.3, 3);
 
 
   /*
-  3) DESCARGA DE LODOS
-  Desde la tolva inferior hacia abajo
+  3) DESCARGA DE LODOS (café)
+  Desde el ápice de la tolva hacia abajo, por la tubería de purga.
   */
 
-  const sludge = new THREE.ArrowHelper(
-    new THREE.Vector3(0,-1,0),
-    new THREE.Vector3(0,-0.5,0),
-    2.5,
-    0x8B4513,
-    0.6,
-    0.3
-  );
-
-  flowArrowsGroup.add(sludge);
-
+  const sludgePath = [
+    new THREE.Vector3(0, -0.05, 0),
+    new THREE.Vector3(0, -1.85, 0)
+  ];
+  addFlowLine(sludgePath, 0x8B4513, 0.18, 2);
 
 }
 function drawPlan(D, wlrStatusCls){
