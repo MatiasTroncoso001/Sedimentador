@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
+
 <meta charset="UTF-8">
+
 <meta 
 name="viewport" 
 content="width=device-width, initial-scale=1.0"
@@ -51,6 +54,8 @@ Versión:
 <title>
 Laboratorio Virtual de Sedimentadores Circulares | REA UBB
 </title>
+
+
 <meta 
 name="description"
 content="
@@ -58,6 +63,8 @@ Laboratorio virtual interactivo para el aprendizaje del diseño y operación
 de sedimentadores circulares aplicados al tratamiento de aguas y espesamiento
 de relaves mineros.
 ">
+
+
 <meta
 name="keywords"
 content="
@@ -75,18 +82,26 @@ simulación,
 REA,
 educación abierta
 ">
+
+
 <meta
 name="author"
 content="Matías Troncoso Araya - Universidad del Bío-Bío"
 >
+
+
 <meta
 name="license"
 content="Creative Commons BY-SA 4.0"
 >
+
+
 <meta
 property="og:title"
 content="Laboratorio Virtual de Sedimentadores Circulares"
 >
+
+
 <meta
 property="og:description"
 content="
@@ -94,10 +109,14 @@ Simulador interactivo para comprender procesos de sedimentación
 aplicados al tratamiento de aguas y espesamiento de relaves mineros.
 "
 >
+
+
 <meta
 property="og:type"
 content="website"
 >
+
+
 <meta
 property="og:locale"
 content="es_CL"
@@ -349,76 +368,73 @@ content="es_CL"
     </div>
   </div>
 
-  <h1>
-Laboratorio Virtual de Sedimentadores Circulares
-</h1>
+  <h1>Simulador de parámetros de sedimentador circular</h1>
+  <p class="subtitle">Ajusta el caudal, el diámetro del sedimentador y la concentración de sólidos de un escenario de operación, y compara la carga superficial (SOR), la carga sobre el vertedero (WLR) y la carga de sólidos (SLR) contra los valores de diseño de referencia.</p>
 
+  <div class="card accent-red" style="margin-bottom:1.5rem;">
+    <h2>¿Qué es un sedimentador circular?</h2>
+    <p style="font-size:14px;line-height:1.65;color:var(--ink);margin:0 0 .9rem;">
+      Un sedimentador secundario circular es una unidad de tratamiento de aguas residuales que separa los sólidos suspendidos (biomasa/lodo) del agua tratada mediante gravedad. El agua con sólidos —el licor mezclado proveniente del reactor biológico— ingresa por un pozo central, pierde velocidad al distribuirse radialmente, y los sólidos decantan hacia el fondo cónico mientras el agua clarificada rebalsa por un vertedero perimetral hacia la salida.
+    </p>
+    <p style="font-size:14px;line-height:1.65;color:var(--ink);margin:0 0 .9rem;">
+      El diseño de estas unidades no es arbitrario: si el caudal es muy alto para el área disponible, los sólidos no alcanzan a decantar y salen con el efluente (falla por arrastre). Si el vertedero recibe más caudal por metro lineal del que puede manejar, se generan corrientes ascendentes que resuspenden sólidos ya decantados. Por eso el diseño se valida contra tres cargas de referencia:
+    </p>
+    <ul style="font-size:13.5px;line-height:1.7;color:var(--ink);margin:0 0 1rem;padding-left:1.2rem;">
+      <li><strong>SOR</strong> (Surface Overflow Rate / carga superficial): cuánto caudal recibe cada m² de área de decantación.</li>
+      <li><strong>WLR</strong> (Weir Loading Rate / carga del vertedero): cuánto caudal rebalsa por cada metro lineal de vertedero.</li>
+      <li><strong>SLR</strong> (Solids Loading Rate / carga de sólidos): cuánta masa de sólidos llega por m² de área, relevante para no saturar la capacidad de espesamiento del fondo.</li>
+    </ul>
 
-<p class="subtitle">
+    <div class="video-embed">
+      <iframe
+        src="https://www.youtube.com/embed/n-rWtOPWk-g"
+        title="Partes de un sedimentador circular"
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen>
+      </iframe>
+    </div>
+    <p class="hint" style="margin-top:.5rem;">Video explicativo de las partes del sedimentador (pozo central, deflector, vertedero, rastras de fondo, poza de lodos).</p>
+  </div>
 
-Recurso Educativo Abierto (REA) para la formación en ingeniería, 
-orientado al análisis de procesos de separación sólido-líquido mediante 
-sedimentación gravitacional.
+  <div class="grid">
 
-El laboratorio permite evaluar la influencia del caudal, la geometría 
-del sedimentador y la concentración de sólidos utilizando criterios 
-de diseño hidráulico como SOR, WLR y SLR, con aplicaciones en tratamiento 
-de aguas residuales y espesamiento de relaves mineros.
+    <div class="card">
+      <h2>Escenario</h2>
 
-</p>
-  <!-- =====================================================
-OBJETIVOS DE APRENDIZAJE
-===================================================== -->
+      <div class="field">
+        <label>Caudal de entrada (Q) <span class="val" id="qVal">4200 m³/día</span></label>
+        <input type="range" id="q" min="500" max="15000" step="50" value="4200">
+      </div>
 
-<div class="card accent-gold" style="margin-bottom:1.5rem;">
+      <div class="field">
+        <label>Diámetro del sedimentador (D) <span class="val" id="dVal">18.0 m</span></label>
+        <input type="range" id="d" min="4" max="40" step="0.5" value="18">
+      </div>
 
-<h2>
-Objetivos de aprendizaje
-</h2>
+      <div class="field">
+        <label>Sólidos suspendidos (SST) <span class="val" id="cVal">2800 mg/L</span></label>
+        <input type="range" id="c" min="500" max="6000" step="50" value="2800">
+        <div class="hint">Concentración de sólidos en el licor mezclado que ingresa al sedimentador.</div>
+      </div>
 
+      <div class="divider"></div>
 
-<p style="font-size:14px;line-height:1.65;margin:0 0 .8rem;color:var(--ink);">
+      <details class="refs">
+        <summary>Valores de diseño de referencia</summary>
+        <div class="ref-fields">
+          <div class="field"><label>SOR mín (m³/m²·día)</label><input type="number" id="sorMin" value="16"></div>
+          <div class="field"><label>SOR máx (m³/m²·día)</label><input type="number" id="sorMax" value="32"></div>
+          <div class="field"><label>WLR mín (m³/m·día)</label><input type="number" id="wlrMin" value="80"></div>
+          <div class="field"><label>WLR máx (m³/m·día)</label><input type="number" id="wlrMax" value="250"></div>
+          <div class="field"><label>SLR mín (kg/m²·día)</label><input type="number" id="slrMin" value="70"></div>
+          <div class="field"><label>SLR máx (kg/m²·día)</label><input type="number" id="slrMax" value="140"></div>
+        </div>
+        <div class="hint" style="margin-top:.6rem;">Editables por el docente para adaptar a distintos manuales de diseño o normativas locales.</div>
+      </details>
+    </div>
 
-Al finalizar la experiencia interactiva, el estudiante será capaz de:
-
-</p>
-
-
-<ul style="
-font-size:14px;
-line-height:1.8;
-color:var(--ink);
-margin:0;
-padding-left:1.3rem;
-">
-
-
-<li>
-Analizar la influencia del caudal, diámetro del sedimentador y concentración de sólidos sobre el desempeño del proceso de sedimentación.
-</li>
-
-
-<li>
-Interpretar los parámetros de diseño 
-<strong>SOR</strong> (carga superficial), 
-<strong>WLR</strong> (carga sobre vertedero) y 
-<strong>SLR</strong> (carga de sólidos) como indicadores de operación.
-</li>
-
-
-<li>
-Relacionar los principios de separación sólido-líquido con aplicaciones de ingeniería, incluyendo tratamiento de aguas residuales y espesamiento de relaves mineros.
-</li>
-
-
-<li>
-Evaluar alternativas de operación y diseño mediante la simulación de diferentes escenarios hidráulicos y de concentración de sólidos.
-</li>
-
-
-</ul>
-
-</div> 
+    <div>
       <div class="card accent-plain" style="margin-bottom:1.5rem;">
         <h2>Modelo 3D <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);font-size:12px;">— arrastra para rotar, scroll para acercar</span></h2>
         <div class="diagram-box">
