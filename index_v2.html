@@ -570,13 +570,25 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
     <div>
       <div class="card accent-plain" style="margin-bottom:1.5rem;">
         <h2>Modelo 3D <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);font-size:12px;">— arrastra para rotar, scroll para acercar</span></h2>
+
+        <div style="display:flex;gap:.5rem;margin-bottom:.9rem;">
+          <button type="button" id="modeAguaBtn" onclick="setVizMode('agua')"
+            style="flex:1;padding:.5rem .7rem;border-radius:2px 8px 2px 8px;border:1px solid var(--water);background:var(--water);color:#fff;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;">
+            Modo clarificador de agua
+          </button>
+          <button type="button" id="modeRelaveBtn" onclick="setVizMode('relave')"
+            style="flex:1;padding:.5rem .7rem;border-radius:2px 8px 2px 8px;border:1px solid var(--line);background:#fff;color:var(--muted);font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;">
+            Modo espesador de relave
+          </button>
+        </div>
+
         <div class="diagram-box">
           <div id="scene3d" style="width:100%;max-width:520px;height:340px;border-radius:8px;background:#DCE9E4;overflow:hidden;"></div>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:.9rem;justify-content:center;margin-top:.8rem;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);">
-          <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#014898;margin-right:5px;vertical-align:middle;"></span>Entrada de alimentación</span>
-          <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#2E8B57;margin-right:5px;vertical-align:middle;"></span>Salida de agua clarificada</span>
-          <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#8B4513;margin-right:5px;vertical-align:middle;"></span>Descarga de lodos</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#014898;margin-right:5px;vertical-align:middle;" id="legendInletDot"></span><span id="legendInlet">Entrada de alimentación</span></span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#2E8B57;margin-right:5px;vertical-align:middle;"></span><span id="legendOutlet">Salida de agua clarificada</span></span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#8B4513;margin-right:5px;vertical-align:middle;" id="legendSludgeDot"></span><span id="legendSludge">Descarga de lodos</span></span>
         </div>
       </div>
 
@@ -674,6 +686,32 @@ let scene3d, camera3d, renderer3d, controls3d, tankGroup, weirMesh, waterMesh, s
 let flowArrowsGroup;
 let flowMarkers = [];
 let flowTime = 0;
+let vizMode = 'agua'; // 'agua' (clarificador) | 'relave' (espesador minero)
+
+function waterColor(){ return vizMode==='relave' ? 0xA9713A : 0x2E6E8E; }
+function troughColor(){ return vizMode==='relave' ? 0xC1854A : 0x3A8DB5; }
+function waterOpacity(){ return vizMode==='relave' ? 0.92 : 0.65; }
+function inletColor(){ return vizMode==='relave' ? 0x8B5A2B : 0x014898; }
+function sludgeColor(){ return vizMode==='relave' ? 0xA0522D : 0x8B4513; }
+function outletColor(){ return 0x2E8B57; }
+
+function setVizMode(mode){
+  vizMode = mode;
+  const aguaBtn = document.getElementById('modeAguaBtn');
+  const relaveBtn = document.getElementById('modeRelaveBtn');
+  const active = "flex:1;padding:.5rem .7rem;border-radius:2px 8px 2px 8px;border:1px solid var(--water);background:var(--water);color:#fff;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;";
+  const inactive = "flex:1;padding:.5rem .7rem;border-radius:2px 8px 2px 8px;border:1px solid var(--line);background:#fff;color:var(--muted);font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;";
+  aguaBtn.style.cssText = mode==='agua' ? active : inactive;
+  relaveBtn.style.cssText = mode==='relave' ? active : inactive;
+
+  document.getElementById('legendInlet').textContent = mode==='relave' ? 'Entrada de pulpa de relave' : 'Entrada de alimentación';
+  document.getElementById('legendOutlet').textContent = mode==='relave' ? 'Salida de agua recuperada' : 'Salida de agua clarificada';
+  document.getElementById('legendSludge').textContent = mode==='relave' ? 'Descarga de relave espesado' : 'Descarga de lodos';
+  document.getElementById('legendInletDot').style.background = '#' + inletColor().toString(16).padStart(6,'0');
+  document.getElementById('legendSludgeDot').style.background = '#' + sludgeColor().toString(16).padStart(6,'0');
+
+  calc();
+}
 
 function initScene3D(){
   const container = document.getElementById('scene3d');
@@ -785,7 +823,7 @@ function drawTank3D(D, wlrStatusCls){
   tankGroup.add(wall);
 
   const waterGeo = new THREE.CylinderGeometry(r*0.985, r*0.985, 0.06, 48);
-  const waterMat = new THREE.MeshStandardMaterial({color:0x2E6E8E, roughness:0.25, metalness:0.05, transparent:true, opacity:0.65});
+  const waterMat = new THREE.MeshStandardMaterial({color:waterColor(), roughness:0.25, metalness:0.05, transparent:true, opacity:waterOpacity()});
   waterMesh = new THREE.Mesh(waterGeo, waterMat);
   waterMesh.position.y = hopperH + wallH - 0.15;
   tankGroup.add(waterMesh);
@@ -870,7 +908,7 @@ function drawTank3D(D, wlrStatusCls){
   const troughWidth = 0.45;
   const troughOuterR = r + troughWidth;
   const troughConcreteMat = new THREE.MeshStandardMaterial({color: 0x9EAFA8, roughness: 0.8, side: THREE.DoubleSide});
-  const troughWaterMat = new THREE.MeshStandardMaterial({color: 0x3A8DB5, roughness: 0.2, transparent: true, opacity: 0.85});
+  const troughWaterMat = new THREE.MeshStandardMaterial({color: troughColor(), roughness: 0.2, transparent: true, opacity: 0.85});
 
   const troughOuterWallGeo = new THREE.CylinderGeometry(troughOuterR, troughOuterR, 0.45, 48, 1, true);
   const troughOuterWall = new THREE.Mesh(troughOuterWallGeo, troughConcreteMat);
@@ -897,6 +935,13 @@ function drawTank3D(D, wlrStatusCls){
   effluentPipe.position.set(-(troughOuterR + effluentPipeLen / 2), hopperH + wallH - 0.08, 0);
   tankGroup.add(effluentPipe);
 
+  const effluentLiquidMat = new THREE.MeshStandardMaterial({color: outletColor(), roughness: 0.2, metalness: 0.05, transparent:true, opacity: 0.9});
+  const effluentLiquidGeo = new THREE.CylinderGeometry(0.075, 0.075, effluentPipeLen - 0.06, 16);
+  const effluentLiquid = new THREE.Mesh(effluentLiquidGeo, effluentLiquidMat);
+  effluentLiquid.rotation.z = Math.PI / 2;
+  effluentLiquid.position.copy(effluentPipe.position);
+  tankGroup.add(effluentLiquid);
+
   const pipeMat = new THREE.MeshStandardMaterial({color:0x3E6E8A, roughness:0.4, metalness:0.15, transparent:true, opacity:0.32, depthWrite:false});
   const pipeY = hopperH + wallH + 1.5;
 
@@ -914,9 +959,22 @@ function drawTank3D(D, wlrStatusCls){
   vertPipe.position.set(0, pipeY - dropLen/2, 0);
   tankGroup.add(vertPipe);
 
-  const sludgePipe = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1.2, 16), pipeMat);
-  sludgePipe.position.set(0, -0.6, 0);
-  tankGroup.add(sludgePipe);
+  const sludgeDropLen = 1.15;
+  const sludgeElbowY = -sludgeDropLen;
+  const sludgeRunLen = 2.3;
+
+  const sludgeDrop = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, sludgeDropLen, 16), pipeMat);
+  sludgeDrop.position.set(0, -sludgeDropLen/2, 0);
+  tankGroup.add(sludgeDrop);
+
+  const sludgeElbow = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), pipeMat);
+  sludgeElbow.position.set(0, sludgeElbowY, 0);
+  tankGroup.add(sludgeElbow);
+
+  const sludgeRun = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, sludgeRunLen, 16), pipeMat);
+  sludgeRun.rotation.z = Math.PI/2;
+  sludgeRun.position.set(sludgeRunLen/2, sludgeElbowY, 0);
+  tankGroup.add(sludgeRun);
 
   const walkY = hopperH + wallH + 0.65;
   const walkMat = new THREE.MeshStandardMaterial({color:0x8A8176, roughness:0.85});
@@ -996,7 +1054,7 @@ function drawFlowArrows(D){
     new THREE.Vector3(0, pipeY, 0),
     new THREE.Vector3(0, vertPipeBottom, 0)
   ];
-  addFlowLine(inletPath, 0x014898, 0.22, 3);
+  addFlowLine(inletPath, inletColor(), 0.22, 3);
 
 
   /*
@@ -1008,19 +1066,21 @@ function drawFlowArrows(D){
     new THREE.Vector3(-(troughOuterR), troughY, 0),
     new THREE.Vector3(-(troughOuterR + 2.0), troughY, 0)
   ];
-  addFlowLine(outletPath, 0x2E8B57, 0.3, 3);
+  addFlowLine(outletPath, outletColor(), 0.3, 3);
 
 
   /*
   3) DESCARGA DE LODOS (café)
-  Desde el ápice de la tolva hacia abajo, por la tubería de purga.
+  Desde el ápice de la tolva baja y luego gira hacia el costado,
+  siguiendo la tubería de purga real (bajante + codo + tramo horizontal).
   */
 
   const sludgePath = [
     new THREE.Vector3(0, -0.05, 0),
-    new THREE.Vector3(0, -1.85, 0)
+    new THREE.Vector3(0, -1.15, 0),
+    new THREE.Vector3(2.3, -1.15, 0)
   ];
-  addFlowLine(sludgePath, 0x8B4513, 0.18, 2);
+  addFlowLine(sludgePath, sludgeColor(), 0.16, 3);
 
 }
 function drawPlan(D, wlrStatusCls){
