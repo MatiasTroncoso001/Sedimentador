@@ -697,6 +697,7 @@ let flowArrowsGroup;
 let flowMarkers = [];
 let flowTime = 0;
 let vizMode = 'agua'; // 'agua' (clarificador) | 'relave' (espesador minero)
+let currentDiameter = 0;
 
 function waterColor(){ return vizMode==='relave' ? 0xA9713A : 0x2E6E8E; }
 function troughColor(){ return vizMode==='relave' ? 0xC1854A : 0x3A8DB5; }
@@ -721,6 +722,9 @@ function setVizMode(mode){
   document.getElementById('legendSludgeDot').style.background = '#' + sludgeColor().toString(16).padStart(6,'0');
 
   calc();
+if(currentDiameter > 0){
+    drawFlowArrows(currentDiameter);
+}
 }
 
 function initScene3D(){
@@ -795,7 +799,7 @@ if(scraperGroup){
     // Velocidad de giro según el modo de operación
     const scraperSpeed =
         (vizMode === 'agua')
-            ? 0.006      // Clarificador
+            ? 0.008      // Clarificador
             : 0.0022;    // Espesador
 
     scraperGroup.rotation.y += scraperSpeed;
@@ -806,9 +810,7 @@ flowTime += 0.006;
 flowMarkers.forEach(m=>{
 
     // Factor global según el modo
-    const modeFactor = (vizMode === 'agua') ? 1.0 : 0.55;
-
-    const t = (flowTime * m.speed * modeFactor + m.phase) % 1;
+const t = (flowTime * m.speed + m.phase) % 1;
 
     const {pos, dir} = pointAlongPath(m.path, t);
     m.mesh.position.copy(pos);
@@ -826,6 +828,7 @@ function statusColor(cls){
 }
 
 function drawTank3D(D, wlrStatusCls){
+ currentDiameter = D;
   while(tankGroup.children.length) tankGroup.remove(tankGroup.children[0]);
 
   const scale = 9 / 20;
@@ -1069,9 +1072,22 @@ function drawFlowArrows(D){
 // Velocidades según modo de operación
 // =====================================================
 
-const inletSpeed  = (vizMode === 'agua') ? 0.22 : 0.12;
-const outletSpeed = (vizMode === 'agua') ? 0.30 : 0.18;
-const sludgeSpeed = (vizMode === 'agua') ? 0.16 : 0.08;
+const FLOW_SPEED = {
+    agua:{
+        inlet:0.22,
+        outlet:0.30,
+        sludge:0.16
+    },
+    relave:{
+        inlet:0.12,
+        outlet:0.18,
+        sludge:0.08
+    }
+};
+
+const inletSpeed  = FLOW_SPEED[vizMode].inlet;
+const outletSpeed = FLOW_SPEED[vizMode].outlet;
+const sludgeSpeed = FLOW_SPEED[vizMode].sludge;
   /*
   1) ENTRADA DE ALIMENTACIÓN (azul)
   Recorre la tubería completa: llega horizontal desde el exterior,
@@ -1083,7 +1099,7 @@ const sludgeSpeed = (vizMode === 'agua') ? 0.16 : 0.08;
     new THREE.Vector3(0, pipeY, 0),
     new THREE.Vector3(0, vertPipeBottom, 0)
   ];
-addFlowLine(inletPath, inletColor(), inletSpeed, 3);
+addFlowLine(inletPath, inletColor(), inletSpeed, 5);
 
 
   /*
@@ -1095,7 +1111,7 @@ addFlowLine(inletPath, inletColor(), inletSpeed, 3);
     new THREE.Vector3(-(troughOuterR), troughY, 0),
     new THREE.Vector3(-(troughOuterR + 2.0), troughY, 0)
   ];
- addFlowLine(outletPath, outletColor(), outletSpeed, 3);
+ addFlowLine(outletPath, outletColor(), outletSpeed, 5);
 
 
   /*
@@ -1109,7 +1125,7 @@ addFlowLine(inletPath, inletColor(), inletSpeed, 3);
     new THREE.Vector3(0, -1.15, 0),
     new THREE.Vector3(2.3, -1.15, 0)
   ];
-addFlowLine(sludgePath, sludgeColor(), sludgeSpeed, 3);
+addFlowLine(sludgePath, sludgeColor(), sludgeSpeed, 5);
 
 }
 function drawPlan(D, wlrStatusCls){
