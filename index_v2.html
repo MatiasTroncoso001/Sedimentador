@@ -1060,7 +1060,13 @@ function drawFlowArrows(D){
   const troughY = hopperH + wallH - 0.08;        // 5.52 — nivel de agua en canal perimetral
   const troughOuterR = r + 0.45;                 // borde exterior del canal perimetral
 
+// =====================================================
+// Velocidades según modo de operación
+// =====================================================
 
+const inletSpeed  = (vizMode === 'agua') ? 0.22 : 0.12;
+const outletSpeed = (vizMode === 'agua') ? 0.30 : 0.18;
+const sludgeSpeed = (vizMode === 'agua') ? 0.16 : 0.08;
   /*
   1) ENTRADA DE ALIMENTACIÓN (azul)
   Recorre la tubería completa: llega horizontal desde el exterior,
@@ -1072,7 +1078,7 @@ function drawFlowArrows(D){
     new THREE.Vector3(0, pipeY, 0),
     new THREE.Vector3(0, vertPipeBottom, 0)
   ];
-  addFlowLine(inletPath, inletColor(), 0.22, 3);
+addFlowLine(inletPath, inletColor(), inletSpeed, 3);
 
 
   /*
@@ -1084,7 +1090,7 @@ function drawFlowArrows(D){
     new THREE.Vector3(-(troughOuterR), troughY, 0),
     new THREE.Vector3(-(troughOuterR + 2.0), troughY, 0)
   ];
-  addFlowLine(outletPath, outletColor(), 0.3, 3);
+ addFlowLine(outletPath, outletColor(), outletSpeed, 3);
 
 
   /*
@@ -1098,7 +1104,7 @@ function drawFlowArrows(D){
     new THREE.Vector3(0, -1.15, 0),
     new THREE.Vector3(2.3, -1.15, 0)
   ];
-  addFlowLine(sludgePath, sludgeColor(), 0.16, 3);
+addFlowLine(sludgePath, sludgeColor(), sludgeSpeed, 3);
 
 }
 function drawPlan(D, wlrStatusCls){
