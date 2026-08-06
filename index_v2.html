@@ -533,7 +533,7 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
       <div class="divider"></div>
 
       <details class="refs">
-        <summary>Valores de diseño de referencia</summary>
+        <summary>Valores de diseño de referencia <span id="refsModeTag" style="font-weight:400;color:var(--muted);">(clarificador de agua)</span></summary>
         <div class="ref-fields">
           <div class="field"><label>SOR mín (m³/m²·día)</label><input type="number" id="sorMin" value="16"></div>
           <div class="field"><label>SOR máx (m³/m²·día)</label><input type="number" id="sorMax" value="32"></div>
@@ -542,8 +542,8 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
           <div class="field"><label>SLR mín (kg/m²·día)</label><input type="number" id="slrMin" value="96"></div>
           <div class="field"><label>SLR máx (kg/m²·día)</label><input type="number" id="slrMax" value="140"></div>
         </div>
-        <div class="hint" style="margin-top:.6rem;">Editables por el docente para adaptar a distintos manuales de diseño o normativas locales.</div>
-        <p style="font-size:11px;line-height:1.6;color:var(--muted);margin:.8rem 0 0;padding-top:.7rem;border-top:1px dashed var(--line);">
+        <div class="hint" style="margin-top:.6rem;">Se precargan automáticamente al cambiar de modo (clarificador/espesador) y son editables por el docente para adaptar a distintos manuales de diseño o normativas locales.</div>
+        <p id="refsSourceText" style="font-size:11px;line-height:1.6;color:var(--muted);margin:.8rem 0 0;padding-top:.7rem;border-top:1px dashed var(--line);">
           <strong>Fuente:</strong> Metcalf &amp; Eddy / Tchobanoglous, G. et al. (2014). <em>Wastewater Engineering: Treatment and Resource Recovery</em>, 5.ª ed. McGraw-Hill. Rangos de SOR y SLR para sedimentación secundaria posterior a lodos activados convencionales, a caudal medio. El rango de WLR es una compilación de referencias complementarias (WEF, Manual of Practice N.º 8).
         </p>
       </details>
@@ -581,6 +581,12 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
             Modo espesador de relave
           </button>
         </div>
+        <div style="display:flex;gap:.5rem;margin-bottom:.9rem;">
+          <button type="button" id="sectionToggleBtn" onclick="toggleSection()"
+            style="flex:1;padding:.5rem .7rem;border-radius:2px 8px 2px 8px;border:1px solid var(--line);background:#fff;color:var(--muted);font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;">
+            Vista en corte
+          </button>
+        </div>
 
         <div class="diagram-box">
           <div id="scene3d" style="width:100%;max-width:520px;height:340px;border-radius:8px;background:#DCE9E4;overflow:hidden;"></div>
@@ -589,6 +595,7 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
           <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#014898;margin-right:5px;vertical-align:middle;" id="legendInletDot"></span><span id="legendInlet">Entrada de alimentación</span></span>
           <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#2E8B57;margin-right:5px;vertical-align:middle;"></span><span id="legendOutlet">Salida de agua clarificada</span></span>
           <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#8B4513;margin-right:5px;vertical-align:middle;" id="legendSludgeDot"></span><span id="legendSludge">Descarga de lodos</span></span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#5C6F63;margin-right:5px;vertical-align:middle;" id="legendBlanketDot"></span><span id="legendBlanket">Manto de sólidos (lodo)</span></span>
         </div>
       </div>
 
@@ -692,19 +699,76 @@ function updateBar(prefix, val, min, max){
   document.getElementById(prefix+'MaxLbl').textContent = fmt(max,0);
 }
 
-let scene3d, camera3d, renderer3d, controls3d, tankGroup, weirMesh, waterMesh, scraperGroup;
+let scene3d, camera3d, renderer3d, controls3d, tankGroup, weirMesh, waterMesh, scraperGroup, sludgeBlanketMesh;
+let currentWlrStatusCls = 'status-ok';
 let flowArrowsGroup;
 let flowMarkers = [];
 let flowTime = 0;
 let vizMode = 'agua'; // 'agua' (clarificador) | 'relave' (espesador minero)
+let sectionView = false; // true = vista en corte (cuña removida, como un molde de torta)
 let currentDiameter = 0;
+
+// Ángulo de la cuña que se remueve en la vista en corte (~80°), centrado
+// hacia la cámara para que se vea el interior sin tener que rotar el modelo.
+const CUT_WEDGE = Math.PI * 0.44;
+const CUT_CENTER = Math.PI * 0.27;
+function sectionTheta(){
+  if(!sectionView) return {start:0, length:Math.PI*2};
+  return {start: CUT_CENTER + CUT_WEDGE/2, length: Math.PI*2 - CUT_WEDGE};
+}
+
+// =====================================================
+// Valores de diseño de referencia según el proceso
+// =====================================================
+// Clarificador de agua: sedimentación secundaria posterior a lodos activados
+// convencionales, caudal medio (Metcalf & Eddy / Tchobanoglous et al., 2014;
+// WLR complementado con WEF MOP N.º 8).
+// Espesador de relave: sedimentación de pulpa mineral en espesadores
+// convencionales; tasas mucho más bajas de SOR/WLR (sedimentación lenta,
+// partículas más densas) y SLR más alta (mayor concentración de sólidos
+// en la alimentación y el underflow), según literatura de procesamiento
+// de minerales (p. ej. Wills' Mineral Processing Technology).
+const REF_RANGES = {
+  agua: {
+    sorMin: 16, sorMax: 32,
+    wlrMin: 80, wlrMax: 250,
+    slrMin: 96, slrMax: 140,
+    source: '<strong>Fuente:</strong> Metcalf &amp; Eddy / Tchobanoglous, G. et al. (2014). <em>Wastewater Engineering: Treatment and Resource Recovery</em>, 5.ª ed. McGraw-Hill. Rangos de SOR y SLR para sedimentación secundaria posterior a lodos activados convencionales, a caudal medio. El rango de WLR es una compilación de referencias complementarias (WEF, Manual of Practice N.º 8).'
+  },
+  relave: {
+    sorMin: 4, sorMax: 15,
+    wlrMin: 40, wlrMax: 150,
+    slrMin: 150, slrMax: 350,
+    source: '<strong>Fuente:</strong> Compilación orientativa a partir de Wills\' Mineral Processing Technology (Wills &amp; Finch, 2016) y prácticas típicas de diseño de espesadores convencionales de relaves. Los rangos son referenciales: el diseño real de un espesador de relaves depende de ensayos de sedimentación (Coe-Clevenger / Kynch) específicos para cada mineral.'
+  }
+};
+
+function applyRefRanges(mode){
+  const r = REF_RANGES[mode];
+  document.getElementById('sorMin').value = r.sorMin;
+  document.getElementById('sorMax').value = r.sorMax;
+  document.getElementById('wlrMin').value = r.wlrMin;
+  document.getElementById('wlrMax').value = r.wlrMax;
+  document.getElementById('slrMin').value = r.slrMin;
+  document.getElementById('slrMax').value = r.slrMax;
+  document.getElementById('refsSourceText').innerHTML = r.source;
+  document.getElementById('refsModeTag').textContent = mode==='relave' ? '(espesador de relave)' : '(clarificador de agua)';
+}
 
 function waterColor(){ return vizMode==='relave' ? 0xA9713A : 0x2E6E8E; }
 function troughColor(){ return vizMode==='relave' ? 0xC1854A : 0x3A8DB5; }
-function waterOpacity(){ return vizMode==='relave' ? 0.92 : 0.65; }
+function waterOpacity(){ return vizMode==='relave' ? 0.95 : 0.45; }
 function inletColor(){ return vizMode==='relave' ? 0x8B5A2B : 0x014898; }
 function sludgeColor(){ return vizMode==='relave' ? 0xA0522D : 0x8B4513; }
 function outletColor(){ return 0x2E8B57; }
+
+// Manto de sólidos (lodo activado / relave sedimentado) dentro del estanque
+function blanketColor(){ return vizMode==='relave' ? 0x6B4423 : 0x5C6F63; }
+function blanketOpacity(){ return vizMode==='relave' ? 0.9 : 0.55; }
+// Fracción de la altura útil (wallH) que ocupa el manto: el relave, más denso
+// y de sedimentación más lenta, forma un manto mucho más alto que el lodo
+// biológico de un clarificador secundario.
+function blanketHeightFrac(){ return vizMode==='relave' ? 0.62 : 0.30; }
 
 function setVizMode(mode){
   vizMode = mode;
@@ -720,11 +784,27 @@ function setVizMode(mode){
   document.getElementById('legendSludge').textContent = mode==='relave' ? 'Descarga de relave espesado' : 'Descarga de lodos';
   document.getElementById('legendInletDot').style.background = '#' + inletColor().toString(16).padStart(6,'0');
   document.getElementById('legendSludgeDot').style.background = '#' + sludgeColor().toString(16).padStart(6,'0');
+  document.getElementById('legendBlanketDot').style.background = '#' + blanketColor().toString(16).padStart(6,'0');
+  document.getElementById('legendBlanket').textContent = mode==='relave' ? 'Manto de relave espesado' : 'Manto de lodo biológico';
+
+  applyRefRanges(mode);
 
   calc();
 if(currentDiameter > 0){
-    drawFlowArrows(currentDiameter);
+    drawTank3D(currentDiameter, currentWlrStatusCls);
 }
+}
+
+function toggleSection(){
+  sectionView = !sectionView;
+  const btn = document.getElementById('sectionToggleBtn');
+  const active = "flex:1;padding:.5rem .7rem;border-radius:2px 8px 2px 8px;border:1px solid var(--water-dark);background:var(--water-dark);color:#fff;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;";
+  const inactive = "flex:1;padding:.5rem .7rem;border-radius:2px 8px 2px 8px;border:1px solid var(--line);background:#fff;color:var(--muted);font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;";
+  btn.style.cssText = sectionView ? active : inactive;
+  btn.textContent = sectionView ? 'Vista en corte: ON' : 'Vista en corte';
+  if(currentDiameter > 0){
+    drawTank3D(currentDiameter, currentWlrStatusCls);
+  }
 }
 
 function initScene3D(){
@@ -829,14 +909,16 @@ function statusColor(cls){
 
 function drawTank3D(D, wlrStatusCls){
  currentDiameter = D;
+ currentWlrStatusCls = wlrStatusCls;
   while(tankGroup.children.length) tankGroup.remove(tankGroup.children[0]);
 
   const scale = 9 / 20;
   const r = Math.max(3.2, D*scale);
   const wallH = 3.2;
   const hopperH = 2.4;
+  const th = sectionTheta();
 
-  const wallGeo = new THREE.CylinderGeometry(r, r, wallH, 48, 1, true);
+  const wallGeo = new THREE.CylinderGeometry(r, r, wallH, 48, 1, true, th.start, th.length);
   const wallMat = new THREE.MeshStandardMaterial({
     color: 0xC7D6D0, 
     side: THREE.DoubleSide, 
@@ -848,13 +930,44 @@ function drawTank3D(D, wlrStatusCls){
   wall.position.y = hopperH + wallH/2;
   tankGroup.add(wall);
 
-  const waterGeo = new THREE.CylinderGeometry(r*0.985, r*0.985, 0.06, 48);
+  const waterGeo = new THREE.CylinderGeometry(r*0.985, r*0.985, 0.06, 48, 1, false, th.start, th.length);
   const waterMat = new THREE.MeshStandardMaterial({color:waterColor(), roughness:0.25, metalness:0.05, transparent:true, opacity:waterOpacity()});
   waterMesh = new THREE.Mesh(waterGeo, waterMat);
   waterMesh.position.y = hopperH + wallH - 0.15;
   tankGroup.add(waterMesh);
 
-  const hopperGeo = new THREE.CylinderGeometry(r, r*0.12, hopperH, 48, 1, true);
+  /*
+  MANTO DE SÓLIDOS: capa de lodo/relave sedimentado que se acumula sobre la
+  tolva, por debajo de la lámina de agua clarificada. Su altura y opacidad
+  varían según el modo: en el espesador de relave el manto es alto y denso
+  (baja velocidad de sedimentación, alta concentración de sólidos); en el
+  clarificador de agua es una capa delgada de lodo biológico.
+  */
+  const blanketH = wallH * blanketHeightFrac();
+  const blanketGeo = new THREE.CylinderGeometry(r*0.97, r*0.90, blanketH, 48, 1, true, th.start, th.length);
+  const blanketMat = new THREE.MeshStandardMaterial({
+    color: blanketColor(),
+    roughness: 0.9,
+    transparent: true,
+    opacity: blanketOpacity(),
+    side: THREE.DoubleSide
+  });
+  sludgeBlanketMesh = new THREE.Mesh(blanketGeo, blanketMat);
+  sludgeBlanketMesh.position.y = hopperH + blanketH/2;
+  tankGroup.add(sludgeBlanketMesh);
+
+  const blanketTopGeo = new THREE.CircleGeometry(r*0.97, 48, th.start, th.length);
+  const blanketTop = new THREE.Mesh(blanketTopGeo, blanketMat);
+  blanketTop.rotation.x = -Math.PI/2;
+  blanketTop.position.y = hopperH + blanketH;
+  tankGroup.add(blanketTop);
+
+  // Pendiente de la tolva: en el espesador de relave la tolva es más
+  // cónica/pronunciada (abertura inferior más angosta) para que la pasta
+  // espesada fluya hacia el centro; en el clarificador de agua la pendiente
+  // es más suave, típica de sedimentación de lodos biológicos.
+  function hopperBottomFrac(){ return vizMode==='relave' ? 0.05 : 0.14; }
+  const hopperGeo = new THREE.CylinderGeometry(r, r*hopperBottomFrac(), hopperH, 48, 1, true, th.start, th.length);
   const hopperMat = new THREE.MeshStandardMaterial({color:0x3F5751, side:THREE.DoubleSide, roughness:0.95});
   const hopper = new THREE.Mesh(hopperGeo, hopperMat);
   hopper.position.y = hopperH/2;
@@ -864,29 +977,49 @@ function drawTank3D(D, wlrStatusCls){
   const baffleRadiusTop = r * 0.20;
   const baffleRadiusBottom = r * 0.32;
   const baffleH = wallH * 0.65;
-  
-  const baffleGeo = new THREE.CylinderGeometry(baffleRadiusTop, baffleRadiusBottom, baffleH, 32, 1, true);
+
+  // Deflector central: se mantiene liso/redondeado (así se ve bien en la realidad).
+  const baffleGeo = new THREE.CylinderGeometry(baffleRadiusTop, baffleRadiusBottom, baffleH, 48, 1, true);
   const baffleMat = new THREE.MeshStandardMaterial({color: 0x1B4B63, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.3});
   const baffleMesh = new THREE.Mesh(baffleGeo, baffleMat);
   baffleMesh.position.y = hopperH + wallH - (baffleH / 2);
   baffleGroup.add(baffleMesh);
+
   tankGroup.add(baffleGroup);
 
+
   scraperGroup = new THREE.Group();
-  const scraperMetalMat = new THREE.MeshStandardMaterial({color: 0x111111, metalness: 0.8, roughness: 0.2});
+  // Factor de "robustez" del mecanismo de rastras: en modo relave los brazos y
+  // el eje son más gruesos, ya que deben vencer la mayor resistencia de un
+  // material espesado y denso.
+  const bulk = vizMode==='relave' ? 1.6 : 1.0;
+  // Color claro y con leve brillo metálico para que el barredor se distinga
+  // con claridad en la zona inferior, sobre la tolva oscura y el manto de sólidos.
+  const scraperMetalMat = new THREE.MeshStandardMaterial({color: 0xCBD4D8, metalness: 0.78, roughness: 0.22, emissive: 0x10181a, emissiveIntensity: 0.3});
 
   const axisHeight = wallH + hopperH * 0.8;
-  const axisGeo = new THREE.CylinderGeometry(0.06, 0.06, axisHeight, 16);
+  const axisGeo = new THREE.CylinderGeometry(0.06*bulk, 0.06*bulk, axisHeight, 16);
   const centralAxis = new THREE.Mesh(axisGeo, scraperMetalMat);
   centralAxis.position.y = hopperH * 0.3 + axisHeight / 2;
   scraperGroup.add(centralAxis);
+
+  // Torre / caja de accionamiento: más grande y robusta en modo relave, ya
+  // que el motorreductor debe entregar mayor torque para mover el relave espesado.
+  const towerMat = new THREE.MeshStandardMaterial({color: vizMode==='relave' ? 0x5B3A29 : 0x35424A, metalness: 0.55, roughness: 0.4});
+  const towerH = 0.55 * bulk;
+  const towerRTop = 0.15 * bulk;
+  const towerRBottom = 0.22 * bulk;
+  const axisTopY = hopperH * 0.3 + axisHeight;
+  const driveTower = new THREE.Mesh(new THREE.CylinderGeometry(towerRTop, towerRBottom, towerH, 16), towerMat);
+  driveTower.position.y = axisTopY + towerH/2;
+  scraperGroup.add(driveTower);
 
   const targetR = r * 0.72;
   const slopeAngle = Math.atan2(hopperH * 0.85, targetR);
   const armLen = Math.sqrt(Math.pow(targetR, 2) + Math.pow(hopperH * 0.85, 2));
 
   [-1, 1].forEach(direction => {
-    const armGeo = new THREE.BoxGeometry(armLen, 0.06, 0.06);
+    const armGeo = new THREE.BoxGeometry(armLen, 0.06*bulk, 0.07*bulk);
     const arm = new THREE.Mesh(armGeo, scraperMetalMat);
     
     arm.position.set(direction * (targetR / 2), hopperH * 0.52, 0);
@@ -895,7 +1028,7 @@ function drawTank3D(D, wlrStatusCls){
 
     const numBlades = 6;
     for(let i = 1; i <= numBlades; i++) {
-      const bladeGeo = new THREE.BoxGeometry(0.04, 0.16, 0.06);
+      const bladeGeo = new THREE.BoxGeometry(0.045*bulk, 0.17*bulk, 0.07*bulk);
       const blade = new THREE.Mesh(bladeGeo, scraperMetalMat);
       const frac = i / (numBlades + 1);
       const bx = direction * (targetR * frac);
@@ -910,17 +1043,37 @@ function drawTank3D(D, wlrStatusCls){
 
   const weirGroup = new THREE.Group();
   const weirColor = statusColor(wlrStatusCls);
-  const weirMat = new THREE.MeshStandardMaterial({color: weirColor, roughness: 0.4, side: THREE.DoubleSide});
-  
-  const weirRingGeo = new THREE.CylinderGeometry(r*0.998, r*0.998, 0.15, 64, 1, true);
+  // El vertedero es la pieza que cambia de color según el estado (WLR alto/bajo/ok).
+  // En un sedimentador real está hecho de placas planas atornilladas, no de un
+  // anillo curvo continuo — por eso aquí usamos pocas caras + flatShading +
+  // aristas marcadas, para que se note la geometría plana y segmentada.
+  const weirMat = new THREE.MeshStandardMaterial({color: weirColor, roughness: 0.4, side: THREE.DoubleSide, flatShading: true});
+
+  const weirSegments = 48;
+  const weirRingGeo = new THREE.CylinderGeometry(r*0.998, r*0.998, 0.15, weirSegments, 1, true, th.start, th.length);
   const weirRing = new THREE.Mesh(weirRingGeo, weirMat);
   weirRing.position.y = hopperH + wallH + 0.075;
   weirGroup.add(weirRing);
+
+  const weirEdges = new THREE.EdgesGeometry(weirRingGeo, 1);
+  const weirEdgeMat = new THREE.LineBasicMaterial({color: 0x2B2B2B});
+  const weirWire = new THREE.LineSegments(weirEdges, weirEdgeMat);
+  weirWire.position.copy(weirRing.position);
+  weirGroup.add(weirWire);
+
+  // En vista en corte, se omiten las muescas que caerían dentro de la cuña
+  // removida (para no dejarlas "flotando" sobre el hueco).
+  function angleInsideCut(angle){
+    if(!sectionView) return false;
+    let a = ((angle - th.start) % (Math.PI*2) + Math.PI*2) % (Math.PI*2);
+    return a > th.length;
+  }
 
   const numNotches = 72;
   const notchGeo = new THREE.ConeGeometry(0.08, 0.2, 3);
   for(let i = 0; i < numNotches; i++) {
     const angle = (i / numNotches) * Math.PI * 2;
+    if(angleInsideCut(angle)) continue;
     const notch = new THREE.Mesh(notchGeo, weirMat);
     notch.position.set(
       Math.cos(angle) * (r * 0.998),
@@ -936,18 +1089,18 @@ function drawTank3D(D, wlrStatusCls){
   const troughConcreteMat = new THREE.MeshStandardMaterial({color: 0x9EAFA8, roughness: 0.8, side: THREE.DoubleSide});
   const troughWaterMat = new THREE.MeshStandardMaterial({color: troughColor(), roughness: 0.2, transparent: true, opacity: 0.85});
 
-  const troughOuterWallGeo = new THREE.CylinderGeometry(troughOuterR, troughOuterR, 0.45, 48, 1, true);
+  const troughOuterWallGeo = new THREE.CylinderGeometry(troughOuterR, troughOuterR, 0.45, 48, 1, true, th.start, th.length);
   const troughOuterWall = new THREE.Mesh(troughOuterWallGeo, troughConcreteMat);
   troughOuterWall.position.y = hopperH + wallH + 0.025;
   tankGroup.add(troughOuterWall);
 
-  const troughFloorGeo = new THREE.RingGeometry(r, troughOuterR, 48);
+  const troughFloorGeo = new THREE.RingGeometry(r, troughOuterR, 48, 1, th.start, th.length);
   const troughFloor = new THREE.Mesh(troughFloorGeo, troughConcreteMat);
   troughFloor.rotation.x = Math.PI / 2;
   troughFloor.position.y = hopperH + wallH - 0.2;
   tankGroup.add(troughFloor);
 
-  const troughWaterGeo = new THREE.RingGeometry(r * 1.002, troughOuterR * 0.98, 48);
+  const troughWaterGeo = new THREE.RingGeometry(r * 1.002, troughOuterR * 0.98, 48, 1, th.start, th.length);
   const troughWater = new THREE.Mesh(troughWaterGeo, troughWaterMat);
   troughWater.rotation.x = Math.PI / 2;
   troughWater.position.y = hopperH + wallH - 0.08;
@@ -1074,14 +1227,14 @@ function drawFlowArrows(D){
 
 const FLOW_SPEED = {
     agua:{
-        inlet:0.22,
-        outlet:0.30,
-        sludge:0.16
+        inlet:0.26,
+        outlet:0.34,
+        sludge:0.20
     },
     relave:{
-        inlet:0.12,
-        outlet:0.18,
-        sludge:0.08
+        inlet:0.07,
+        outlet:0.10,
+        sludge:0.045
     }
 };
 
