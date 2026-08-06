@@ -801,10 +801,15 @@ if(scraperGroup){
     scraperGroup.rotation.y += scraperSpeed;
 
 }
+flowTime += 0.006;
 
-  flowTime += 0.006;
-  flowMarkers.forEach(m=>{
-    const t = (flowTime * m.speed + m.phase) % 1;
+flowMarkers.forEach(m=>{
+
+    // Factor global según el modo
+    const modeFactor = (vizMode === 'agua') ? 1.0 : 0.55;
+
+    const t = (flowTime * m.speed * modeFactor + m.phase) % 1;
+
     const {pos, dir} = pointAlongPath(m.path, t);
     m.mesh.position.copy(pos);
     m.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir);
