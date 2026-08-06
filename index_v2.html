@@ -655,6 +655,16 @@ const d = document.getElementById('d');
 const c = document.getElementById('c');
 const refs = ['sorMin','sorMax','wlrMin','wlrMax','slrMin','slrMax'].map(id=>document.getElementById(id));
 
+/*=========================================================
+ MODO DE OPERACIÓN
+=========================================================*/
+
+let operationMode = "agua";     // "agua" o "relave"
+
+/* Velocidades del rastrillo */
+
+const SCRAPER_SPEED_WATER = 0.006;
+const SCRAPER_SPEED_TAILINGS = 0.0025;  
 function fmt(n, dec=1){
   return Number(n).toLocaleString('es-CL',{minimumFractionDigits:dec,maximumFractionDigits:dec});
 }
@@ -780,9 +790,17 @@ function pointAlongPath(points, t){
 function animate3D(){
   requestAnimationFrame(animate3D);
 
-  if(scraperGroup){
-    scraperGroup.rotation.y += 0.006;
-  }
+if(scraperGroup){
+
+    // Velocidad de giro según el modo de operación
+    const scraperSpeed =
+        (vizMode === 'agua')
+            ? 0.006      // Clarificador
+            : 0.0022;    // Espesador
+
+    scraperGroup.rotation.y += scraperSpeed;
+
+}
 
   flowTime += 0.006;
   flowMarkers.forEach(m=>{
