@@ -361,6 +361,9 @@ content="es_CL"
       <button class="btn-download" style="background-color: var(--water-dark);" onclick="downloadTeacherGuide()">
         Descargar guía docente (.pdf)
       </button>
+      <button class="btn-download" style="background-color: var(--water);" onclick="downloadStudentGuide()">
+        Descargar guía del estudiante (.pdf)
+      </button>
       <button class="btn-download" style="background-color: #4A5561;" onclick="downloadSourceCode()">
         Descargar código fuente (.html)
       </button>
@@ -499,7 +502,7 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
 </ul>
     <div class="video-embed">
       <iframe
-        src="https://www.youtube.com/embed/n-rWtOPWk-g"
+        src="https://www.youtube.com/embed/2I_eYvd38QU"
         title="Partes de un sedimentador circular"
         frameborder="0"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -591,11 +594,11 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
 
         <div style="display:flex;gap:.5rem;margin-bottom:.9rem;">
           <button type="button" id="modeAguaBtn" onclick="setVizMode('agua')"
-            style="flex:1;padding:.5rem .7rem;border-radius:2px 8px 2px 8px;border:1px solid var(--water);background:var(--water);color:#fff;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;">
+            style="flex:1;padding:.5rem .7rem;border-radius:2px 8px 2px 8px;border:1px solid var(--line);background:#fff;color:var(--muted);font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;">
             Modo clarificador de agua
           </button>
           <button type="button" id="modeRelaveBtn" onclick="setVizMode('relave')"
-            style="flex:1;padding:.5rem .7rem;border-radius:2px 8px 2px 8px;border:1px solid var(--line);background:#fff;color:var(--muted);font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;">
+            style="flex:1;padding:.5rem .7rem;border-radius:2px 8px 2px 8px;border:1px solid var(--water);background:var(--water);color:#fff;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;">
             Modo espesador de relave
           </button>
         </div>
@@ -712,7 +715,7 @@ let currentWlrStatusCls = 'status-ok';
 let flowArrowsGroup;
 let flowMarkers = [];
 let flowTime = 0;
-let vizMode = 'agua'; // 'agua' (clarificador) | 'relave' (espesador minero)
+let vizMode = 'relave'; // 'agua' (clarificador) | 'relave' (espesador minero) — modo por defecto
 let sectionView = false; // true = vista en corte (cuña removida, como un molde de torta)
 let currentDiameter = 0;
 
@@ -1362,15 +1365,17 @@ function downloadSourceCode() {
 }
 
 /* FUNCIÓN PARA GENERAR EL PDF DE LA GUÍA DOCENTE CON LOGOS INSTITUCIONALES */
-function downloadTeacherGuide() {
-  const logo1Src = document.querySelectorAll('.ubb-logo')[0]?.src || '';
-  const logo2Src = document.querySelectorAll('.ubb-logo')[1]?.src || '';
+/* ================================================================
+   CONTENIDO COMPARTIDO ENTRE LA GUÍA DOCENTE Y LA GUÍA DEL ESTUDIANTE
+   Una sola fuente de verdad: si se edita una actividad aquí, se
+   actualiza automáticamente en AMBOS documentos descargables.
+   ================================================================ */
+function buildGuideContent(isRelave){
 
-  const isRelave = (typeof vizMode !== 'undefined' && vizMode === 'relave');
+  const competencia = 'Aplica principios y fundamentos de las ciencias de la ingeniería para analizar, diseñar y evaluar procesos de separación sólido-líquido, integrando criterios técnicos, operacionales y de sustentabilidad en contextos reales de tratamiento de aguas y de la industria minera.';
 
-  /* ==========================================================
-     CONTENIDO QUE CAMBIA SEGÚN EL MODO ACTIVO DEL SIMULADOR
-     ========================================================== */
+  const comoUsar = `Esta guía se trabaja <strong>en paralelo con el simulador abierto en el navegador</strong>, no de forma aislada ni desconectada de la página. Cada actividad pide mover un control específico (los deslizadores de Caudal, Diámetro o SST), leer un valor exacto del panel "Ecuaciones en vivo", observar un cambio de color en el modelo 3D, o usar los botones de modo y "Vista en corte". Ninguna de estas respuestas se puede obtener con una calculadora aparte o buscando en internet: dependen de lo que observes en tu propia sesión con la herramienta. Actualmente el simulador está en <strong>modo ${isRelave ? 'espesador de relave' : 'clarificador de agua'}</strong>.`;
+
   const mode = isRelave ? {
     tituloProceso: 'Espesador de Relaves Mineros',
     asignaturas: 'Procesamiento de Minerales, Geotecnia de Relaves, Operaciones Unitarias.',
@@ -1380,21 +1385,6 @@ function downloadTeacherGuide() {
       'Relacionar los principios de sedimentación con la gestión de relaves mineros: recuperación de agua de proceso y disposición del relave espesado.',
       'Evaluar alternativas de diseño geométrico frente a escenarios de aumento de producción de la faena.'
     ],
-    act1: {
-      titulo: 'Actividad 1: Sensibilidad Hidráulica del Espesador',
-      texto: 'Fija el diámetro en 18.0 m y la concentración de sólidos en 2.800 mg/L (activa el modo "espesador de relave"). Incrementa paulatinamente el caudal de pulpa desde 1.500 hasta 6.000 m³/día.',
-      consigna: '¿A qué caudal aproximado se supera la Carga Superficial Máxima de diseño (15 m³/m²·día)? Compara este valor con el caudal crítico obtenido en modo clarificador de agua. ¿Por qué un espesador de relaves opera con cargas superficiales tan inferiores a las de un clarificador de agua?'
-    },
-    act2: {
-      titulo: 'Actividad 2: Sobrecarga de Sólidos en la Alimentación',
-      texto: 'Fija el caudal en 2.500 m³/día y el diámetro en 16.0 m. Modifica la concentración de sólidos de entrada variando entre 1.000 mg/L y 6.000 mg/L.',
-      consigna: 'Identifica la concentración límite donde la Carga de Sólidos (SLR) supera los 350 kg/m²·día. Observa el manto de relave espesado en el modelo 3D: ¿qué relación existe entre el aumento del manto y el riesgo de operación del rastrillo?'
-    },
-    act3: {
-      titulo: 'Actividad 3: Caso de Estudio — Expansión de una Faena Minera',
-      texto: 'Una planta concentradora debe aumentar su producción, pasando de un caudal de relave de 1.800 a 3.200 m³/día, manteniendo la concentración de sólidos en 3.000 mg/L.',
-      consigna: 'Utilizando los rangos de referencia del modo espesador, determina el diámetro mínimo (D) necesario para que los 3 parámetros permanezcan en rango OK. Justifica tu propuesta e indica qué ensayo de laboratorio (Coe-Clevenger / Kynch) sería necesario para validar este diseño en la práctica real.'
-    },
     fuente: 'Wills\' Mineral Processing Technology (Wills &amp; Finch, 2016).'
   } : {
     tituloProceso: 'Sedimentador Circular — Clarificador de Aguas Residuales',
@@ -1405,68 +1395,90 @@ function downloadTeacherGuide() {
       'Relacionar los principios de separación sólido-líquido con el tratamiento de aguas residuales, evaluando condiciones operativas críticas.',
       'Proponer soluciones técnicas de rediseño geométrico u operativo ante fallas de clarificación.'
     ],
-    act1: {
-      titulo: 'Actividad 1: Caudal Crítico e Hidráulica (Sensibilidad del SOR y WLR)',
-      texto: 'Fija el diámetro en 18.0 m y SST en 2.800 mg/L. Incrementa paulatinamente el caudal desde 4.000 hasta 10.000 m³/día.',
-      consigna: '¿A qué caudal exacto se sobrepasa la Carga Superficial Máxima (32 m³/m²·día)? ¿Qué parámetro entra en estado "ALTO" primero: SOR o WLR? Explica la razón geométrica.'
-    },
-    act2: {
-      titulo: 'Actividad 2: Sobrecarga de Sólidos por Mal Funcionamiento de Purga',
-      texto: 'Fija el caudal en 5.000 m³/día y el diámetro en 16.0 m. Modifica la concentración de lodo de entrada (SST) variando entre 1.500 mg/L y 5.500 mg/L.',
-      consigna: 'Identifica la concentración límite donde la Carga de Sólidos (SLR) supera los 140 kg/m²·día. ¿Qué consecuencias físicas tendría esta condición sobre el barredor de lodos en el modelo 3D?'
-    },
-    act3: {
-      titulo: 'Actividad 3: Caso de Estudio — Expansión de Planta Tratadora',
-      texto: 'Una PTAR necesita aumentar su capacidad de tratamiento debido a un aumento poblacional, pasando de 4.200 m³/día a 7.500 m³/día manteniendo los SST en 3.000 mg/L.',
-      consigna: 'Utilizando los rangos de referencia, determina el diámetro mínimo (D) necesario para que los 3 parámetros permanezcan en rango OK. Justifica tu propuesta con los valores obtenidos del simulador.'
-    },
     fuente: 'Metcalf &amp; Eddy / Tchobanoglous et al. (2014), <em>Wastewater Engineering: Treatment and Resource Recovery</em>, 5.ª ed.'
   };
 
-  const objetivosHTML = mode.objetivos.map(o => `<li>${o}</li>`).join('');
+  // ---- Actividad 1: sensibilidad hidráulica (Q) — RA1, RA2 ----
+  const act1 = isRelave ? {
+    titulo: 'Actividad 1 — Sensibilidad Hidráulica del Espesador (RA1, RA2)',
+    instruccion: 'En el simulador (modo espesador de relave), fija Diámetro = 18.0 m y SST = 2.800 mg/L. Sube el Caudal (Q) en pasos de 500 m³/día, partiendo de 1.500 hasta 6.000. En cada paso, copia del panel "Ecuaciones en vivo" la ecuación de SOR con los números sustituidos, y registra el color del anillo del vertedero en el modelo 3D.',
+    tablaHeaders: ['Q (m³/día)', 'Ecuación SOR (con números)', 'Estado SOR', 'Color anillo vertedero'],
+    tablaFilas: 6,
+    consigna: '¿A qué caudal aproximado el estado de SOR cambia a "alto"? Compara ese valor con el que obtendrías en modo clarificador de agua (misma D). ¿Por qué un espesador de relaves debe operar a cargas superficiales mucho menores?',
+    notaDocente: 'Con D=18 m (Área≈254 m²) y SOR máx=15 m³/m²·día, el umbral teórico es Q≈3.817 m³/día — dentro del rango explorado. En modo agua, con la misma D, el umbral sube a Q≈8.143 m³/día (SOR máx=32). La brecha ilustra que los flóculos minerales/relave requieren mucha más área por unidad de caudal que el lodo biológico.'
+  } : {
+    titulo: 'Actividad 1 — Caudal Crítico e Hidráulica (RA1, RA2)',
+    instruccion: 'En el simulador (modo clarificador de agua), fija Diámetro = 18.0 m y SST = 2.800 mg/L. Sube el Caudal (Q) en pasos de 1.000 m³/día, partiendo de 4.000 hasta 10.000. En cada paso, copia del panel "Ecuaciones en vivo" la ecuación de SOR con los números sustituidos, y registra el color del anillo del vertedero en el modelo 3D.',
+    tablaHeaders: ['Q (m³/día)', 'Ecuación SOR (con números)', 'Estado SOR', 'Color anillo vertedero'],
+    tablaFilas: 7,
+    consigna: '¿A qué caudal exacto el estado de SOR cambia a "alto"? ¿Qué parámetro entra en estado "alto" primero, SOR o WLR? Explica la razón geométrica (relación área vs. perímetro).',
+    notaDocente: 'Con D=18 m (Área≈254 m², perímetro≈56.5 m): SOR máx=32 → Q crítico≈8.143 m³/día. WLR máx=250 → Q crítico≈14.137 m³/día (fuera del rango explorado). SOR limita primero porque el área crece con D² mientras el perímetro solo crece con D.'
+  };
 
-  /* ==========================================================
-     RÚBRICA DE EVALUACIÓN (misma estructura para ambos modos,
-     alineada a los 4 Resultados de Aprendizaje)
-     ========================================================== */
+  // ---- Actividad 2: sobrecarga de sólidos (SST) — RA2 ----
+  const act2 = isRelave ? {
+    titulo: 'Actividad 2 — Relación entre SOR y SLR en un Espesador (RA2)',
+    instruccion: 'Fija Q = 5.000 m³/día y D = 16.0 m (modo espesador de relave). Mueve el deslizador de SST entre 1.500 y 6.000 mg/L, observando en cada extremo el estado de SOR y de SLR en el panel de Resultados.',
+    tablaHeaders: ['SST (mg/L)', 'Estado SOR', 'Ecuación SLR (con números)', 'Estado SLR'],
+    tablaFilas: 5,
+    consigna: 'Es muy probable que observes que SOR ya está en estado "alto" incluso con el SST más bajo, y que SLR nunca llega a "alto" dentro del rango del simulador. Matemáticamente, SLR = SOR × (SST en kg/m³). Si el SST máximo del simulador es 6 kg/m³, ¿qué tan grande tendría que ser el SOR para que el SLR alcance por sí solo su máximo de diseño (350 kg/m²·día)? Compara ese valor con el SOR máximo permitido (15 m³/m²·día) y explica qué te dice esto sobre cuál parámetro es realmente crítico al diseñar un espesador de relaves.',
+    notaDocente: 'Se necesitaría SOR≈58 m³/m²·día para que SLR llegue a 350 con SST=6 kg/m³ — casi 4 veces el SOR máximo permitido (15). Esto expone, dentro del rango de concentraciones que permite el slider (pensado en unidades de aguas residuales), que el SOR es el parámetro limitante real en este simulador, no el SLR. Es una simplificación intencional: en un espesador minero real, con pulpas de decenas de miles de mg/L, la relación se invierte. Vale la pena discutirlo abiertamente con el curso.'
+  } : {
+    titulo: 'Actividad 2 — Sobrecarga de Sólidos (RA2)',
+    instruccion: 'Fija Q = 5.000 m³/día y D = 16.0 m (modo clarificador de agua). Mueve el deslizador de SST entre 1.500 y 6.000 mg/L. En cada paso, copia la ecuación de SLR con los números sustituidos y registra el estado.',
+    tablaHeaders: ['SST (mg/L)', 'Ecuación SLR (con números)', 'Estado SLR'],
+    tablaFilas: 5,
+    consigna: '¿En qué concentración de SST aproximada el estado de SLR cambia a "alto"? ¿Qué consecuencia física tendría esta condición sobre el barredor de fondo del sedimentador?',
+    notaDocente: 'Con Q=5.000 m³/día, D=16 m (Área≈201 m²) y SLR máx=140 kg/m²·día, el umbral teórico es SST≈5.630 mg/L — dentro del rango explorado (1.500–6.000).'
+  };
+
+  // ---- Actividad 3: comparación entre modos — RA3 (idéntica en ambos casos, solo cambia el punto de partida) ----
+  const act3 = {
+    titulo: 'Actividad 3 — Comparación entre Modo Agua y Modo Relave (RA3)',
+    instruccion: `Deja los controles en sus valores por defecto (Q=4.200 m³/día, D=18.0 m, SST=2.800 mg/L) sin modificarlos. Registra el estado de SOR/WLR/SLR en el modo actual (${isRelave ? 'espesador de relave' : 'clarificador de agua'}). Luego presiona el botón del modo opuesto. Vuelve a registrar los tres estados. Abre "Valores de diseño de referencia" y anota los rangos numéricos que cambiaron automáticamente. Finalmente, activa "Vista en corte" y compara la altura y el color del manto de sólidos entre ambos modos.`,
+    tablaHeaders: ['Aspecto observado', 'Modo clarificador de agua', 'Modo espesador de relave'],
+    tablaFilas: 6,
+    consigna: '¿Por qué el mismo caudal (4.200 m³/día) que resulta aceptable — o incluso conservador — para un clarificador de agua provoca sobrecarga en un espesador de relave? ¿Qué te dice esto sobre las diferencias físicas entre un lodo biológico y un relave mineral? Cita la fuente bibliográfica que aparece en el panel de referencia de cada modo.',
+    notaDocente: 'Con los valores por defecto: en modo agua, SOR≈16.5 (ok, borde bajo), WLR≈74.3 (bajo), SLR≈46.2 (bajo) — diseño conservador. En modo relave, el mismo caudal da SOR≈16.5, que ya supera el máximo de relave (15) → estado "alto", mientras WLR (74.3) queda "ok" y SLR (46.2) "bajo". El contraste es deliberado y no requiere mover ningún slider: solo cambiar de modo.'
+  };
+
+  // ---- Actividad 4: desafío de diseño — RA4 ----
+  const act4 = isRelave ? {
+    titulo: 'Actividad 4 — Desafío de Diseño: Expansión de una Faena Minera (RA4)',
+    instruccion: 'Una planta concentradora debe aumentar su producción, pasando de un caudal de relave de 1.800 a 3.200 m³/día, manteniendo la concentración de sólidos en 3.000 mg/L (modo espesador de relave).',
+    consigna: 'Usando el simulador, determina el diámetro mínimo (D) necesario para que los 3 parámetros permanezcan en estado "ok". Justifica tu propuesta indicando los valores de SOR, WLR y SLR obtenidos, y qué ensayo de laboratorio (Coe-Clevenger / Kynch) sería necesario para validar este diseño en la práctica real.',
+    notaDocente: 'Para SLR≤350 y Q=3.200, C=3 kg/m³: Área≥3200*3/350≈27.4 m² → D≥5.9 m (no limitante). Para SOR≤15: Área≥3200/15≈213 m² → D≥16.5 m. Este último es el que gobierna: D mínimo≈16.5–17 m.'
+  } : {
+    titulo: 'Actividad 4 — Desafío de Diseño: Expansión de Planta Tratadora (RA4)',
+    instruccion: 'Una PTAR necesita aumentar su capacidad de tratamiento debido a un aumento poblacional, pasando de 4.200 a 7.500 m³/día, manteniendo los SST en 3.000 mg/L (modo clarificador de agua).',
+    consigna: 'Usando el simulador, determina el diámetro mínimo (D) necesario para que los 3 parámetros permanezcan en estado "ok". Justifica tu propuesta con los valores de SOR, WLR y SLR obtenidos, e indica qué ocurriría si se mantuviera el diámetro original de 18.0 m.',
+    notaDocente: 'Para SOR≤32: Área≥7500/32≈234.4 m² → D≥17.3 m. Para SLR≥96 (mínimo, no crítico aquí) y ≤140: Área≥7500*3/140≈160.7 m² → D≥14.3 m (no limitante). D mínimo≈17.3–18 m: con el diámetro original de 18 m el sistema queda apenas dentro de rango.'
+  };
+
+  const reflexion = 'Un mismo criterio de diseño —la sedimentación gravitacional— sostiene tanto la potabilización del agua que consume una comunidad como la gestión de relaves de una faena minera. ¿Qué responsabilidades técnicas y éticas asume un ingeniero o ingeniera al diseñar estos sistemas, considerando que una falla operacional puede afectar tanto la salud pública como el entorno ambiental?';
+
+  return { competencia, comoUsar, mode, act1, act2, act3, act4, reflexion, isRelave };
+}
+
+
+/* ================================================================
+   GUÍA DEL DOCENTE — incluye notas de apoyo y rúbrica
+   ================================================================ */
+function downloadTeacherGuide() {
+  const logo1Src = document.querySelectorAll('.ubb-logo')[0]?.src || '';
+  const logo2Src = document.querySelectorAll('.ubb-logo')[1]?.src || '';
+  const c = buildGuideContent(typeof vizMode !== 'undefined' && vizMode === 'relave');
+  const isRelave = c.isRelave;
+
+  const objetivosHTML = c.mode.objetivos.map(o => `<li>${o}</li>`).join('');
+
   const rubricaRows = [
-    {
-      criterio: 'RA1 — Sensibilidad hidráulica',
-      insuf: 'No identifica el caudal donde ocurre sobrecarga, o los valores registrados no coinciden con el simulador.',
-      sufic: 'Identifica el caudal de sobrecarga con apoyo, sin explicar la causa geométrica.',
-      bueno: 'Identifica correctamente el caudal crítico y explica de forma parcial la relación entre área/perímetro y el parámetro que falla primero.',
-      excel: 'Identifica el caudal crítico con precisión y explica con claridad la razón geométrica de por qué SOR o WLR fallan primero.'
-    },
-    {
-      criterio: 'RA2 — Interpretación de SOR/WLR/SLR',
-      insuf: 'Confunde el significado físico de los parámetros o no logra explicarlos.',
-      sufic: 'Explica el significado de cada parámetro de forma básica, con imprecisiones.',
-      bueno: 'Explica correctamente qué representa cada parámetro y menciona alguna consecuencia de excederlo.',
-      excel: 'Explica con precisión el significado físico de los tres parámetros y sus consecuencias operativas específicas al superarse.'
-    },
-    {
-      criterio: 'RA3 — Aplicación a ' + (isRelave ? 'minería' : 'tratamiento de aguas'),
-      insuf: 'No relaciona el proceso simulado con su aplicación de ingeniería real.',
-      sufic: 'Relaciona el proceso con su aplicación de forma general, sin profundizar.',
-      bueno: 'Relaciona correctamente el proceso simulado con su aplicación e identifica al menos una diferencia con el otro modo del simulador.',
-      excel: 'Relaciona el proceso con su aplicación real y contrasta con solidez ambos modos (agua/relave), incluyendo limitaciones del modelo.'
-    },
-    {
-      criterio: 'RA4 — Desafío de diseño',
-      insuf: 'No logra proponer un diámetro que cumpla los tres parámetros en rango.',
-      sufic: 'Propone un diámetro válido por ensayo-error, sin justificación técnica.',
-      bueno: 'Propone un diámetro válido y justifica su elección con los valores de SOR/WLR/SLR obtenidos.',
-      excel: 'Propone un diámetro válido, lo justifica técnicamente y reconoce qué información adicional (ensayos, normativa local) se requeriría en un diseño real.'
-    },
-    {
-      criterio: 'Reflexión final',
-      insuf: 'No responde o la respuesta no aborda la pregunta planteada.',
-      sufic: 'Responde de forma superficial, sin argumentar.',
-      bueno: 'Responde con argumentos razonables, considerando al menos un aspecto técnico y uno ético/social.',
-      excel: 'Responde con argumentación sólida, integrando aspectos técnicos, éticos y de responsabilidad profesional.'
-    }
+    { criterio: 'RA1 — Sensibilidad hidráulica', insuf: 'No identifica el caudal donde ocurre sobrecarga, o los valores registrados no coinciden con el simulador.', sufic: 'Identifica el caudal de sobrecarga con apoyo, sin explicar la causa geométrica.', bueno: 'Identifica correctamente el caudal crítico y explica de forma parcial la relación entre área/perímetro.', excel: 'Identifica el caudal crítico con precisión y explica con claridad la razón geométrica de por qué SOR o WLR fallan primero.' },
+    { criterio: 'RA2 — Interpretación SOR/WLR/SLR', insuf: 'Confunde el significado físico de los parámetros o no logra explicarlos.', sufic: 'Explica el significado de cada parámetro de forma básica, con imprecisiones.', bueno: 'Explica correctamente qué representa cada parámetro y menciona alguna consecuencia de excederlo.', excel: 'Explica con precisión el significado físico de los tres parámetros, su relación matemática y sus consecuencias operativas.' },
+    { criterio: 'RA3 — Comparación agua/relave', insuf: 'No logra explicar por qué difieren los resultados entre modos.', sufic: 'Reconoce que los resultados difieren, sin justificar la causa física.', bueno: 'Explica correctamente la diferencia entre modos citando al menos un factor físico.', excel: 'Explica con solidez la diferencia entre modos, cita ambas fuentes bibliográficas y relaciona con las limitaciones del modelo.' },
+    { criterio: 'RA4 — Desafío de diseño', insuf: 'No logra proponer un diámetro que cumpla los tres parámetros en rango.', sufic: 'Propone un diámetro válido por ensayo-error, sin justificación técnica.', bueno: 'Propone un diámetro válido y justifica su elección con los valores de SOR/WLR/SLR obtenidos.', excel: 'Propone un diámetro válido, lo justifica técnicamente y reconoce qué información adicional (ensayos, normativa local) se requeriría en un diseño real.' },
+    { criterio: 'Reflexión final', insuf: 'No responde o la respuesta no aborda la pregunta planteada.', sufic: 'Responde de forma superficial, sin argumentar.', bueno: 'Responde con argumentos razonables, considerando al menos un aspecto técnico y uno ético/social.', excel: 'Responde con argumentación sólida, integrando aspectos técnicos, éticos y de responsabilidad profesional.' }
   ];
-
   const rubricaHTML = rubricaRows.map(r => `
     <tr>
       <td style="padding:5px 6px; border:1px solid #C6D3CE; font-weight:bold; width:15%;">${r.criterio}</td>
@@ -1476,10 +1488,20 @@ function downloadTeacherGuide() {
       <td style="padding:5px 6px; border:1px solid #C6D3CE; width:21.25%;">${r.excel}</td>
     </tr>`).join('');
 
+  function actividadDocenteHTML(a){
+    return `
+      <div style="font-size: 11px; margin-bottom: 12px; page-break-inside: avoid;">
+        <strong>${a.titulo}</strong><br>
+        ${a.instruccion}<br>
+        <em>Consigna:</em> ${a.consigna}
+        <div style="background:#FDF0D2; border-left:3px solid #F9B614; margin-top:5px; padding:5px 8px; font-size:9.5px; color:#5B4A00;">
+          <strong>Nota para el docente:</strong> ${a.notaDocente}
+        </div>
+      </div>`;
+  }
+
   const guideHTML = `
     <div style="font-family: Arial, sans-serif; padding: 20px; color: #0F2A35; line-height: 1.5;">
-      
-      <!-- LOGOS INSTITUCIONALES -->
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 2px solid #C6D3CE; padding-bottom: 12px;">
         <div style="display: flex; align-items: center; gap: 12px;">
           ${logo1Src ? `<img src="${logo1Src}" style="height: 48px; width: auto; object-fit: contain;">` : ''}
@@ -1487,386 +1509,53 @@ function downloadTeacherGuide() {
           ${logo2Src ? `<img src="${logo2Src}" style="height: 58px; width: auto; object-fit: contain;">` : ''}
         </div>
         <div style="text-align: right;">
-          <p style="font-size: 10px; font-weight: bold; color: #1B4B63; text-transform: uppercase; letter-spacing: 0.5px; margin: 0;">
-            Universidad del Bío-Bío
-          </p>
-          <p style="font-size: 9px; color: #5B6B67; margin: 2px 0 0 0;">
-            Programa STEAM — Recurso Educativo Abierto
-          </p>
+          <p style="font-size: 10px; font-weight: bold; color: #1B4B63; text-transform: uppercase; letter-spacing: 0.5px; margin: 0;">Universidad del Bío-Bío</p>
+          <p style="font-size: 9px; color: #5B6B67; margin: 2px 0 0 0;">Programa STEAM — Recurso Educativo Abierto</p>
         </div>
       </div>
 
-      <!-- Encabezado -->
+      <div style="display:inline-block; background:#1B4B63; color:#fff; font-size:9px; font-weight:bold; letter-spacing:.04em; padding:3px 10px; border-radius:3px; margin-bottom:8px;">VERSIÓN DOCENTE</div>
       <div style="border-bottom: 3px solid #2E6E8E; padding-bottom: 8px; margin-bottom: 18px;">
-        <h1 style="font-size: 18px; color: #1B4B63; margin: 0 0 4px 0;">
-          Guía Didáctica y Taller Práctico: ${mode.tituloProceso}
-        </h1>
-        <p style="font-size: 11px; color: #5B6B67; margin: 0;">
-          Aplicación de Carga Superficial (SOR), Carga sobre Vertedero (WLR) y Carga de Sólidos (SLR)
-        </p>
+        <h1 style="font-size: 18px; color: #1B4B63; margin: 0 0 4px 0;">Guía Didáctica y Taller Práctico: ${c.mode.tituloProceso}</h1>
+        <p style="font-size: 11px; color: #5B6B67; margin: 0;">Aplicación de Carga Superficial (SOR), Carga sobre Vertedero (WLR) y Carga de Sólidos (SLR)</p>
       </div>
 
-      <!-- Ficha Técnica -->
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 10.5px; background: #F7FAF9; border: 1px solid #C6D3CE;">
         <tr>
-          <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Asignaturas:</strong> ${mode.asignaturas}</td>
+          <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Asignaturas:</strong> ${c.mode.asignaturas}</td>
           <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Duración estimada:</strong> 60 a 90 minutos.</td>
         </tr>
         <tr>
-          <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Modalidad:</strong> Individual o en parejas (Laboratorio Virtual / Taller).</td>
-          <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Herramienta:</strong> Simulador 3D Interactivo — modo ${isRelave ? 'espesador de relave' : 'clarificador de agua'}.</td>
+          <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Modalidad:</strong> Individual o en parejas.</td>
+          <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Herramienta:</strong> Simulador 3D — modo ${isRelave ? 'espesador de relave' : 'clarificador de agua'}.</td>
         </tr>
       </table>
 
- <!-- 1. Competencia declarada -->
-<h2 style="font-size:13px;color:#1B4B63;border-left:4px solid #2E6E8E;padding-left:8px;margin:14px 0 6px 0;">
-1. Competencia declarada
-</h2>
-
-<p style="font-size:11px;text-align:justify;">
-Esta guía tributa a la siguiente competencia de formación de ingeniería:
-</p>
-
-<p style="font-size:11px;background:#F7FAF9;padding:10px;border-left:4px solid #2E6E8E;">
-Aplica principios y fundamentos de las ciencias de la ingeniería para analizar,
-diseñar y evaluar procesos de separación sólido-líquido, integrando criterios
-técnicos, operacionales y de sustentabilidad en contextos reales de tratamiento
-de aguas y de la industria minera.
-</p>
-
-<h2 style="font-size:13px;color:#1B4B63;border-left:4px solid #2E6E8E;padding-left:8px;margin:18px 0 6px 0;">
-2. Resultados de Aprendizaje
-</h2>
-
-<ul style="font-size:11px;line-height:1.5;">
-${objetivosHTML}
-</ul>
-
-<div style="background:#FFF8E8;border-left:5px solid #F0B429;padding:12px;margin-top:10px;">
-<b>Orientación para el docente</b>
-
-<p style="margin-top:8px;font-size:10.5px;">
-Antes de iniciar el laboratorio, explique brevemente el fundamento físico
-de los parámetros SOR, WLR y SLR, verificando que los estudiantes comprendan
-el significado operacional de cada uno antes de manipular el simulador.
-</p>
-</div>
-<!-- 3. Instrucciones de uso del simulador -->
-<h2 style="font-size:13px;color:#1B4B63;border-left:4px solid #2E6E8E;padding-left:8px;margin:16px 0 6px 0;">
-3. Instrucciones de uso del simulador
-</h2>
-
-<p style="font-size:11px;text-align:justify;">
-Antes de comenzar, solicite a los estudiantes abrir el Laboratorio Virtual y
-visualizar el video introductorio. Indique que utilicen los controles de
-Caudal (Q), Diámetro (D) y Sólidos Suspendidos (SST) para modificar distintos
-escenarios y registrar los resultados obtenidos mediante el panel de
-Resultados y el panel de Ecuaciones.
-</p>
-
-<div style="background:#F7FAF9;border-left:5px solid #2E6E8E;padding:10px;margin-top:10px;">
-
-<b>Orientaciones para el docente</b>
-
-<ul style="font-size:10.5px;line-height:1.5;margin-top:8px;">
-
-<li>Verifique que todos los estudiantes comprendan el significado físico de SOR, WLR y SLR antes de comenzar.</li>
-
-<li>Promueva que los estudiantes formulen hipótesis antes de modificar los parámetros del simulador.</li>
-
-<li>Solicite registrar cada cambio realizado y justificar técnicamente las respuestas.</li>
-
-<li>Favorezca la discusión grupal comparando diferentes configuraciones del simulador.</li>
-
-</ul>
-
-</div>
-
-<!-- 4. Ecuaciones de referencia -->
-
-<h2 style="font-size:13px;color:#1B4B63;border-left:4px solid #2E6E8E;padding-left:8px;margin:18px 0 6px 0;">
-4. Ecuaciones de referencia
-</h2>
-
-<div style="background:#EAF0EE;padding:8px 12px;border-radius:5px;font-size:10.5px;">
-
-<p><strong>Carga Superficial (SOR)</strong><br>
-SOR = Q / A<sub>s</sub>
-</p>
-
-<p><strong>Carga sobre Vertedero (WLR)</strong><br>
-WLR = Q / L<sub>v</sub>
-</p>
-
-<p><strong>Carga de Sólidos (SLR)</strong><br>
-SLR = (Q · SST) / A<sub>s</sub>
-</p>
-
-<p style="font-size:9px;color:#5B6B67;">
-${mode.fuente}
-</p>
-
-</div>
-
-   <!-- 5. Actividades prácticas -->
-<h2 style="font-size:13px;color:#1B4B63;border-left:4px solid #2E6E8E;padding-left:8px;margin:18px 0 8px 0;">
-5. Actividades prácticas
-</h2>
-
-<!-- ACTIVIDAD 1 -->
-<div style="border:1px solid #C6D3CE;border-radius:6px;padding:12px;margin-bottom:16px;background:#FCFCFC;">
-
-<h3 style="margin-top:0;color:#1B4B63;">${mode.act1.titulo}</h3>
-
-<p><strong>Objetivo:</strong> Analizar el efecto de las condiciones hidráulicas sobre el desempeño del proceso.</p>
-
-<p><strong>Procedimiento:</strong></p>
-
-<p style="margin-left:15px;">
-${mode.act1.texto}
-</p>
-
-<p><strong>Consigna para el estudiante</strong></p>
-
-<p style="margin-left:15px;">
-${mode.act1.consigna}
-</p>
-
-<div style="background:#F7FAF9;padding:12px;border-left:5px solid #2E6E8E;margin-top:12px;">
-
-<h4 style="margin:0;color:#1B4B63;">Orientaciones para el docente</h4>
-
-<p style="font-size:10px;margin-top:10px;"><strong> Resultado esperado</strong></p>
-
-<p style="font-size:10px;text-align:justify;">
-El estudiante debe identificar correctamente el caudal en el que el sistema deja de operar dentro de los límites de diseño y justificar técnicamente por qué ocurre la sobrecarga utilizando los valores de SOR y WLR.
-</p>
-
-<p style="font-size:10px;"><strong> Errores frecuentes</strong></p>
-
-<ul style="font-size:10px;line-height:1.5;">
-<li>Confundir el aumento del caudal con un aumento del diámetro.</li>
-<li>Interpretar únicamente el color del indicador sin analizar los valores numéricos.</li>
-<li>No relacionar el área superficial con la variación del SOR.</li>
-</ul>
-
-<p style="font-size:10px;"><strong>💬 Preguntas para promover la discusión</strong></p>
-
-<ul style="font-size:10px;line-height:1.5;">
-<li>¿Cuál de los parámetros cambia más rápidamente al incrementar el caudal?</li>
-<li>¿Qué ocurriría si duplicáramos el diámetro manteniendo el mismo caudal?</li>
-<li>¿Por qué un mayor diámetro mejora el desempeño hidráulico?</li>
-</ul>
-
-<p style="font-size:10px;"><strong> Conceptos clave a reforzar</strong></p>
-
-<ul style="font-size:10px;line-height:1.5;">
-<li>Carga superficial (SOR).</li>
-<li>Carga sobre vertedero (WLR).</li>
-<li>Área superficial efectiva.</li>
-<li>Relación entre geometría y operación.</li>
-</ul>
-
-</div>
-
-</div>
-
-<!-- ACTIVIDAD 2 -->
-
-<div style="border:1px solid #C6D3CE;border-radius:6px;padding:12px;margin-bottom:16px;background:#FCFCFC;">
-
-<h3 style="margin-top:0;color:#1B4B63;">${mode.act2.titulo}</h3>
-
-<p><strong>Objetivo:</strong> Interpretar el comportamiento de la carga de sólidos y sus implicancias operacionales.</p>
-
-<p><strong>Procedimiento:</strong></p>
-
-<p style="margin-left:15px;">
-${mode.act2.texto}
-</p>
-
-<p><strong>Consigna para el estudiante</strong></p>
-
-<p style="margin-left:15px;">
-${mode.act2.consigna}
-</p>
-
-<div style="background:#F7FAF9;padding:12px;border-left:5px solid #2E6E8E;margin-top:12px;">
-
-<h4 style="margin:0;color:#1B4B63;">Orientaciones para el docente</h4>
-
-<p style="font-size:10px;"><strong> Resultado esperado</strong></p>
-
-<p style="font-size:10px;text-align:justify;">
-El estudiante identifica el punto en que la carga de sólidos supera el valor recomendado y explica las consecuencias operacionales utilizando el comportamiento del simulador.
-</p>
-
-<p style="font-size:10px;"><strong> Errores frecuentes</strong></p>
-
-<ul style="font-size:10px;">
-<li>Confundir concentración con caudal.</li>
-<li>No observar simultáneamente los tres indicadores.</li>
-<li>Extraer conclusiones únicamente a partir del modelo 3D.</li>
-</ul>
-
-<p style="font-size:10px;"><strong>💬 Preguntas para la discusión</strong></p>
-
-<ul style="font-size:10px;">
-<li>¿Qué parámetro limita realmente la operación?</li>
-<li>¿Qué consecuencias tendría una sobrecarga prolongada?</li>
-<li>¿Qué variable modificarían primero para corregir el problema?</li>
-</ul>
-
-<p style="font-size:10px;"><strong> Conceptos clave</strong></p>
-
-<ul style="font-size:10px;">
-<li>SLR.</li>
-<li>Balance sólido-líquido.</li>
-<li>Sobrecarga operacional.</li>
-<li>Capacidad hidráulica.</li>
-</ul>
-
-</div>
-
-</div>
-
-<!-- ACTIVIDAD 3 -->
-
-<div style="border:1px solid #C6D3CE;border-radius:6px;padding:12px;margin-bottom:16px;background:#FCFCFC;">
-
-<h3 style="margin-top:0;color:#1B4B63;">${mode.act3.titulo}</h3>
-
-<p><strong>Objetivo:</strong> Resolver un problema de diseño utilizando criterios de ingeniería.</p>
-
-<p><strong>Caso de estudio</strong></p>
-
-<p style="margin-left:15px;">
-${mode.act3.texto}
-</p>
-
-<p><strong>Desafío</strong></p>
-
-<p style="margin-left:15px;">
-${mode.act3.consigna}
-</p>
-
-<div style="background:#F7FAF9;padding:12px;border-left:5px solid #2E6E8E;margin-top:12px;">
-
-<h4 style="margin:0;color:#1B4B63;">Orientaciones para el docente</h4>
-
-<p style="font-size:10px;"><strong> Resultado esperado</strong></p>
-
-<p style="font-size:10px;text-align:justify;">
-El estudiante propone un diámetro técnicamente válido utilizando los resultados obtenidos en el simulador y fundamenta su decisión considerando los tres criterios de diseño.
-</p>
-
-<p style="font-size:10px;"><strong> Errores frecuentes</strong></p>
-
-<ul style="font-size:10px;">
-<li>Seleccionar un diámetro sin justificarlo.</li>
-<li>Basar la decisión únicamente en un parámetro.</li>
-<li>No considerar la interacción entre SOR, WLR y SLR.</li>
-</ul>
-
-<p style="font-size:10px;"><strong>💬 Preguntas para la discusión</strong></p>
-
-<ul style="font-size:10px;">
-<li>¿Existe una única solución correcta?</li>
-<li>¿Qué ocurriría si aumentara nuevamente el caudal?</li>
-<li>¿Qué información adicional solicitarían antes de construir la unidad?</li>
-</ul>
-
-<p style="font-size:10px;"><strong> Conceptos clave</strong></p>
-
-<ul style="font-size:10px;">
-<li>Diseño de unidades.</li>
-<li>Optimización.</li>
-<li>Criterios de ingeniería.</li>
-<li>Toma de decisiones.</li>
-</ul>
-
-</div>
-
-</div>
-     <!-- 6. Reflexión final -->
-
-<h2 style="
-font-size:13px;
-color:#1B4B63;
-border-left:4px solid #2E6E8E;
-padding-left:8px;
-margin:20px 0 8px 0;
-">
-
-6. Reflexión final
-
-</h2>
-
-<div style="
-background:#F8FAFB;
-border:1px solid #C6D3CE;
-padding:15px;
-border-radius:6px;
-">
-
-<p style="font-size:11px;">
-
-<strong>Pregunta para discutir con los estudiantes</strong>
-
-</p>
-
-<p style="font-size:11px;text-align:justify;">
-
-A partir de los resultados obtenidos mediante el simulador,
-explique cuál de los tres parámetros de diseño (SOR, WLR o SLR)
-considera más crítico para el correcto funcionamiento del proceso.
-Justifique su respuesta utilizando los valores obtenidos durante las actividades.
-
-</p>
-
-<div style="
-margin-top:12px;
-padding:10px;
-background:#FFF8E8;
-border-left:5px solid #F0B429;
-">
-
-<b>Orientaciones para el docente</b>
-
-<ul style="
-font-size:10px;
-line-height:1.5;
-margin-top:8px;
-">
-
-<li>
-No existe una única respuesta correcta.
-</li>
-
-<li>
-Valore la capacidad de argumentación técnica por sobre el resultado numérico.
-</li>
-
-<li>
-Promueva que los estudiantes comparen el comportamiento de los tres indicadores.
-</li>
-
-<li>
-Favorezca que relacionen el simulador con situaciones reales de ingeniería.
-</li>
-
-</ul>
-
-</div>
-
-</div>
-      <!-- 7. Rúbrica de evaluación -->
-      <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 18px 0 8px 0; page-break-before: always; padding-top: 10px;">
-        7. Rúbrica de Evaluación
-      </h2>
-      <p style="font-size: 10px; color: #5B6B67; margin: 0 0 8px 0;">
-        Escala: 1 = Insuficiente · 2 = Suficiente · 3 = Bueno · 4 = Excelente. Puntaje total sugerido: suma de los 5 criterios (máx. 20 puntos).
-      </p>
+      <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 14px 0 6px 0;">1. Competencia y Objetivos de Aprendizaje</h2>
+      <p style="font-size:10.5px; font-style:italic; background:#E0ECFA; padding:6px 10px; border-radius:4px; margin:0 0 8px;">${c.competencia}</p>
+      <ul style="font-size: 11px; margin: 0; padding-left: 18px; line-height: 1.4;">${objetivosHTML}</ul>
+
+      <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 16px 0 6px 0;">2. Ecuaciones Base</h2>
+      <div style="background: #EAF0EE; padding: 8px 12px; border-radius: 5px; font-size: 10.5px;">
+        <p style="margin: 2px 0;">• <strong>SOR</strong> = Q / A_s = Q / [π · (D/2)²] &nbsp;<em>[m³/m²·día]</em></p>
+        <p style="margin: 2px 0;">• <strong>WLR</strong> = Q / (π · D) &nbsp;<em>[m³/m·día]</em></p>
+        <p style="margin: 2px 0;">• <strong>SLR</strong> = (Q · SST) / A_s &nbsp;<em>[kg/m²·día]</em></p>
+        <p style="margin: 4px 0 0; font-size: 9px; color: #5B6B67;">Fuente de los valores de referencia: ${c.mode.fuente}</p>
+      </div>
+
+      <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 16px 0 8px 0;">3. Actividades Prácticas Guiadas</h2>
+      ${actividadDocenteHTML(c.act1)}
+      ${actividadDocenteHTML(c.act2)}
+      ${actividadDocenteHTML(c.act3)}
+      ${actividadDocenteHTML(c.act4)}
+
+      <div style="font-size: 11px; margin-bottom: 10px; page-break-inside: avoid;">
+        <strong>Pregunta de reflexión final</strong><br>
+        <em style="color:#1B4B63;">${c.reflexion}</em>
+      </div>
+
+      <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 18px 0 8px 0; page-break-before: always; padding-top: 10px;">4. Rúbrica de Evaluación</h2>
+      <p style="font-size: 10px; color: #5B6B67; margin: 0 0 8px 0;">Escala: 1 = Insuficiente · 2 = Suficiente · 3 = Bueno · 4 = Excelente. Puntaje total sugerido: máx. 20 puntos.</p>
       <table style="width: 100%; border-collapse: collapse; font-size: 8.5px; table-layout: fixed;">
         <thead>
           <tr style="background: #1B4B63; color: #fff;">
@@ -1877,31 +1566,137 @@ Favorezca que relacionen el simulador con situaciones reales de ingeniería.
             <th style="padding: 5px 6px; border: 1px solid #C6D3CE; text-align: left;">4 · Excelente</th>
           </tr>
         </thead>
-        <tbody>
-          ${rubricaHTML}
-        </tbody>
+        <tbody>${rubricaHTML}</tbody>
       </table>
 
-      <!-- Pie de página de la guía -->
       <div style="margin-top: 25px; border-top: 1px solid #C6D3CE; padding-top: 6px; font-size: 9.5px; color: #5B6B67; text-align: center;">
-        Recurso Educativo Abierto (REA) — Desarrollado para la Universidad del Bío-Bío · Licencia Creative Commons CC BY-SA 4.0.
+        Recurso Educativo Abierto (REA) — Universidad del Bío-Bío · Licencia Creative Commons CC BY-SA 4.0.
       </div>
     </div>
   `;
 
-  const opt = {
-    margin:       [10, 12, 10, 12],
-    filename:     `Guia_Docente_${isRelave ? 'Espesador_Relave' : 'Clarificador_Agua'}_UBB.pdf`,
-    image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, useCORS: true },
-    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  };
+  html2pdf().set({
+    margin: [10, 12, 10, 12],
+    filename: `Guia_Docente_${isRelave ? 'Espesador_Relave' : 'Clarificador_Agua'}_UBB.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  }).from(guideHTML).save();
+}
 
-  html2pdf().set(opt).from(guideHTML).save();
+
+/* ================================================================
+   GUÍA DEL ESTUDIANTE — mismas actividades, sin notas de apoyo,
+   con tablas y espacios en blanco para completar
+   ================================================================ */
+function downloadStudentGuide() {
+  const logo1Src = document.querySelectorAll('.ubb-logo')[0]?.src || '';
+  const logo2Src = document.querySelectorAll('.ubb-logo')[1]?.src || '';
+  const c = buildGuideContent(typeof vizMode !== 'undefined' && vizMode === 'relave');
+  const isRelave = c.isRelave;
+
+  const objetivosHTML = c.mode.objetivos.map(o => `<li>${o}</li>`).join('');
+
+  function blankRows(nCols, nRows){
+    let rows = '';
+    for(let r=0;r<nRows;r++){
+      rows += '<tr>' + Array(nCols).fill('<td style="border:1px solid #C6D3CE; padding:9px; height:14px;">&nbsp;</td>').join('') + '</tr>';
+    }
+    return rows;
+  }
+
+  function actividadEstudianteHTML(a){
+    const headerRow = a.tablaHeaders.map(h => `<th style="padding:5px 6px; border:1px solid #C6D3CE; background:#1B4B63; color:#fff; text-align:left; font-size:9px;">${h}</th>`).join('');
+    return `
+      <div style="font-size: 11px; margin-bottom: 6px; page-break-inside: avoid;">
+        <strong>${a.titulo}</strong><br>
+        ${a.instruccion}
+      </div>
+      <table style="width:100%; border-collapse:collapse; margin-bottom:8px; font-size:9px;">
+        <thead><tr>${headerRow}</tr></thead>
+        <tbody>${blankRows(a.tablaHeaders.length, a.tablaFilas)}</tbody>
+      </table>
+      <p style="font-size:11px; margin:0 0 4px;"><em>Consigna:</em> ${a.consigna}</p>
+      <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">${blankRows(1,3)}</table>
+    `;
+  }
+
+  const guideHTML = `
+    <div style="font-family: Arial, sans-serif; padding: 20px; color: #0F2A35; line-height: 1.5;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 2px solid #C6D3CE; padding-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          ${logo1Src ? `<img src="${logo1Src}" style="height: 48px; width: auto; object-fit: contain;">` : ''}
+          ${logo1Src && logo2Src ? `<div style="width: 1px; height: 40px; background-color: #C6D3CE;"></div>` : ''}
+          ${logo2Src ? `<img src="${logo2Src}" style="height: 58px; width: auto; object-fit: contain;">` : ''}
+        </div>
+        <div style="text-align: right;">
+          <p style="font-size: 10px; font-weight: bold; color: #1B4B63; text-transform: uppercase; letter-spacing: 0.5px; margin: 0;">Universidad del Bío-Bío</p>
+          <p style="font-size: 9px; color: #5B6B67; margin: 2px 0 0 0;">Programa STEAM — Recurso Educativo Abierto</p>
+        </div>
+      </div>
+
+      <div style="display:inline-block; background:#014898; color:#fff; font-size:9px; font-weight:bold; letter-spacing:.04em; padding:3px 10px; border-radius:3px; margin-bottom:8px;">GUÍA DEL ESTUDIANTE</div>
+      <div style="border-bottom: 3px solid #2E6E8E; padding-bottom: 8px; margin-bottom: 14px;">
+        <h1 style="font-size: 18px; color: #1B4B63; margin: 0 0 4px 0;">Laboratorio Virtual: ${c.mode.tituloProceso}</h1>
+        <p style="font-size: 11px; color: #5B6B67; margin: 0;">Trabaja esta guía con el simulador abierto en tu navegador.</p>
+      </div>
+
+      <table style="width:100%; border-collapse:collapse; margin-bottom:16px; font-size:10.5px;">
+        <tr>
+          <td style="padding:5px 0; width:33%;"><strong>Nombre:</strong> ______________________</td>
+          <td style="padding:5px 0; width:33%;"><strong>Curso:</strong> ______________________</td>
+          <td style="padding:5px 0; width:34%;"><strong>Fecha:</strong> ______________________</td>
+        </tr>
+      </table>
+
+      <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 12px 0 6px 0;">Competencia y Resultados de Aprendizaje</h2>
+      <p style="font-size:10.5px; font-style:italic; background:#E0ECFA; padding:6px 10px; border-radius:4px; margin:0 0 8px;">${c.competencia}</p>
+      <ul style="font-size: 11px; margin: 0 0 10px; padding-left: 18px; line-height: 1.4;">${objetivosHTML}</ul>
+
+      <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 14px 0 6px 0;">Cómo usar esta guía</h2>
+      <p style="font-size:10.5px; margin:0 0 10px;">${c.comoUsar}</p>
+
+      <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 14px 0 8px 0;">Ecuaciones base</h2>
+      <div style="background: #EAF0EE; padding: 8px 12px; border-radius: 5px; font-size: 10.5px; margin-bottom:14px;">
+        <p style="margin: 2px 0;">• <strong>SOR</strong> = Q / A_s = Q / [π · (D/2)²] &nbsp;<em>[m³/m²·día]</em></p>
+        <p style="margin: 2px 0;">• <strong>WLR</strong> = Q / (π · D) &nbsp;<em>[m³/m·día]</em></p>
+        <p style="margin: 2px 0;">• <strong>SLR</strong> = (Q · SST) / A_s &nbsp;<em>[kg/m²·día]</em></p>
+      </div>
+
+      <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 16px 0 10px 0; page-break-before: always; padding-top:10px;">Actividades</h2>
+      ${actividadEstudianteHTML(c.act1)}
+      ${actividadEstudianteHTML(c.act2)}
+      ${actividadEstudianteHTML(c.act3)}
+
+      <div style="page-break-before: always; padding-top:10px;"></div>
+      <div style="font-size: 11px; margin-bottom: 6px;">
+        <strong>${c.act4.titulo}</strong><br>
+        ${c.act4.instruccion}
+      </div>
+      <p style="font-size:11px; margin:0 0 4px;"><em>Desafío:</em> ${c.act4.consigna}</p>
+      <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">${blankRows(1,6)}</table>
+
+      <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 16px 0 8px 0;">Pregunta de reflexión final</h2>
+      <p style="font-size:11px; font-style:italic; background:#FDF0D2; border-left:3px solid #F9B614; padding:8px 10px; margin:0 0 10px;">${c.reflexion}</p>
+      <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">${blankRows(1,8)}</table>
+
+      <div style="margin-top: 20px; border-top: 1px solid #C6D3CE; padding-top: 6px; font-size: 9.5px; color: #5B6B67; text-align: center;">
+        Recurso Educativo Abierto (REA) — Universidad del Bío-Bío · Licencia Creative Commons CC BY-SA 4.0.
+      </div>
+    </div>
+  `;
+
+  html2pdf().set({
+    margin: [10, 12, 10, 12],
+    filename: `Guia_Estudiante_${isRelave ? 'Espesador_Relave' : 'Clarificador_Agua'}_UBB.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  }).from(guideHTML).save();
 }
 
 [q,d,c,...refs].forEach(el => el.addEventListener('input', calc));
-calc();
+setVizMode('relave');
 </script>
 </body>
 </html>
