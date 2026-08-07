@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
- 
+
 <meta charset="UTF-8">
 
 <meta 
@@ -509,6 +509,24 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
     <p class="hint" style="margin-top:.5rem;">Video explicativo de las partes del sedimentador (pozo central, deflector, vertedero, rastras de fondo, poza de lodos).</p>
   </div>
 
+  <div class="card accent-plain" style="margin-bottom:1.5rem;">
+    <h2>Limitaciones del modelo</h2>
+    <p style="font-size:14px;line-height:1.65;color:var(--ink);margin:0 0 .9rem;">
+      Este simulador es una herramienta didáctica de estado estacionario, no un modelo de ingeniería de detalle. Antes de usar sus resultados fuera del contexto docente, ten en cuenta las siguientes simplificaciones:
+    </p>
+    <ul style="font-size:13.5px;line-height:1.75;color:var(--ink);margin:0 0 1rem;padding-left:1.2rem;">
+      <li>Se asume un <strong>vertedero perimetral completo y sin obstrucciones</strong>; no modela deflectores, muescas en V, ni distribución desigual del caudal alrededor del perímetro.</li>
+      <li>Los cálculos son de <strong>estado estacionario</strong>: no representan el comportamiento transitorio ante variaciones bruscas de caudal, partidas/paradas, ni eventos de tormenta.</li>
+      <li>No incorpora la <strong>velocidad de sedimentación real de las partículas</strong> (ensayos tipo columna de sedimentación, Kynch o Coe-Clevenger); usa rangos de referencia típicos de literatura, no curvas específicas de un mineral o lodo real.</li>
+      <li>No modela <strong>floculación, temperatura, viscosidad del fluido ni reología del material espesado</strong> — variables que en la práctica cambian significativamente el desempeño real de un sedimentador o espesador.</li>
+      <li>Los <strong>valores de diseño de referencia</strong> (SOR/WLR/SLR) son rangos orientativos de literatura general; el diseño real de una unidad específica requiere ensayos de laboratorio con la mezcla o mineral real y debe ser validado por un ingeniero especialista.</li>
+      <li>La geometría 3D es una <strong>representación esquemática</strong> (proporciones simplificadas para claridad visual), no un plano de ingeniería a escala.</li>
+    </ul>
+    <p style="font-size:13px;line-height:1.6;color:var(--muted);margin:0;padding-top:.7rem;border-top:1px dashed var(--line);">
+      En modo <strong>clarificador de agua</strong>, estas simplificaciones son razonables para introducir los conceptos de SOR/WLR/SLR en un curso de ingeniería sanitaria. En modo <strong>espesador de relave</strong>, son especialmente relevantes: el diseño real de un espesador minero depende críticamente de ensayos de sedimentación del mineral específico (Coe-Clevenger/Kynch), que este simulador no reemplaza — aquí se usa solo para introducir el concepto y comparar cualitativamente ambos procesos.
+    </p>
+  </div>
+
   <div class="grid">
 
     <div class="card">
@@ -662,16 +680,6 @@ const d = document.getElementById('d');
 const c = document.getElementById('c');
 const refs = ['sorMin','sorMax','wlrMin','wlrMax','slrMin','slrMax'].map(id=>document.getElementById(id));
 
-/*=========================================================
- MODO DE OPERACIÓN
-=========================================================*/
-
-let operationMode = "agua";     // "agua" o "relave"
-
-/* Velocidades del rastrillo */
-
-const SCRAPER_SPEED_WATER = 0.006;
-const SCRAPER_SPEED_TAILINGS = 0.0025;  
 function fmt(n, dec=1){
   return Number(n).toLocaleString('es-CL',{minimumFractionDigits:dec,maximumFractionDigits:dec});
 }
@@ -1358,6 +1366,116 @@ function downloadTeacherGuide() {
   const logo1Src = document.querySelectorAll('.ubb-logo')[0]?.src || '';
   const logo2Src = document.querySelectorAll('.ubb-logo')[1]?.src || '';
 
+  const isRelave = (typeof vizMode !== 'undefined' && vizMode === 'relave');
+
+  /* ==========================================================
+     CONTENIDO QUE CAMBIA SEGÚN EL MODO ACTIVO DEL SIMULADOR
+     ========================================================== */
+  const mode = isRelave ? {
+    tituloProceso: 'Espesador de Relaves Mineros',
+    asignaturas: 'Procesamiento de Minerales, Geotecnia de Relaves, Operaciones Unitarias.',
+    objetivos: [
+      'Analizar la influencia del caudal de pulpa (Q), el diámetro del espesador y la concentración de sólidos sobre el desempeño del espesamiento de relaves.',
+      'Interpretar los parámetros de diseño SOR, WLR y SLR como indicadores de operación de un espesador convencional de relaves.',
+      'Relacionar los principios de sedimentación con la gestión de relaves mineros: recuperación de agua de proceso y disposición del relave espesado.',
+      'Evaluar alternativas de diseño geométrico frente a escenarios de aumento de producción de la faena.'
+    ],
+    act1: {
+      titulo: 'Actividad 1: Sensibilidad Hidráulica del Espesador',
+      texto: 'Fija el diámetro en 18.0 m y la concentración de sólidos en 2.800 mg/L (activa el modo "espesador de relave"). Incrementa paulatinamente el caudal de pulpa desde 1.500 hasta 6.000 m³/día.',
+      consigna: '¿A qué caudal aproximado se supera la Carga Superficial Máxima de diseño (15 m³/m²·día)? Compara este valor con el caudal crítico obtenido en modo clarificador de agua. ¿Por qué un espesador de relaves opera con cargas superficiales tan inferiores a las de un clarificador de agua?'
+    },
+    act2: {
+      titulo: 'Actividad 2: Sobrecarga de Sólidos en la Alimentación',
+      texto: 'Fija el caudal en 2.500 m³/día y el diámetro en 16.0 m. Modifica la concentración de sólidos de entrada variando entre 1.000 mg/L y 6.000 mg/L.',
+      consigna: 'Identifica la concentración límite donde la Carga de Sólidos (SLR) supera los 350 kg/m²·día. Observa el manto de relave espesado en el modelo 3D: ¿qué relación existe entre el aumento del manto y el riesgo de operación del rastrillo?'
+    },
+    act3: {
+      titulo: 'Actividad 3: Caso de Estudio — Expansión de una Faena Minera',
+      texto: 'Una planta concentradora debe aumentar su producción, pasando de un caudal de relave de 1.800 a 3.200 m³/día, manteniendo la concentración de sólidos en 3.000 mg/L.',
+      consigna: 'Utilizando los rangos de referencia del modo espesador, determina el diámetro mínimo (D) necesario para que los 3 parámetros permanezcan en rango OK. Justifica tu propuesta e indica qué ensayo de laboratorio (Coe-Clevenger / Kynch) sería necesario para validar este diseño en la práctica real.'
+    },
+    fuente: 'Wills\' Mineral Processing Technology (Wills &amp; Finch, 2016).'
+  } : {
+    tituloProceso: 'Sedimentador Circular — Clarificador de Aguas Residuales',
+    asignaturas: 'Ingeniería Sanitaria, Tratamiento de Aguas Servidas, Mecánica de Fluidos.',
+    objetivos: [
+      'Analizar la influencia del caudal (Q), el diámetro del sedimentador y la concentración de sólidos sobre el desempeño del proceso de sedimentación.',
+      'Interpretar los parámetros de diseño SOR, WLR y SLR como indicadores de operación de un clarificador secundario.',
+      'Relacionar los principios de separación sólido-líquido con el tratamiento de aguas residuales, evaluando condiciones operativas críticas.',
+      'Proponer soluciones técnicas de rediseño geométrico u operativo ante fallas de clarificación.'
+    ],
+    act1: {
+      titulo: 'Actividad 1: Caudal Crítico e Hidráulica (Sensibilidad del SOR y WLR)',
+      texto: 'Fija el diámetro en 18.0 m y SST en 2.800 mg/L. Incrementa paulatinamente el caudal desde 4.000 hasta 10.000 m³/día.',
+      consigna: '¿A qué caudal exacto se sobrepasa la Carga Superficial Máxima (32 m³/m²·día)? ¿Qué parámetro entra en estado "ALTO" primero: SOR o WLR? Explica la razón geométrica.'
+    },
+    act2: {
+      titulo: 'Actividad 2: Sobrecarga de Sólidos por Mal Funcionamiento de Purga',
+      texto: 'Fija el caudal en 5.000 m³/día y el diámetro en 16.0 m. Modifica la concentración de lodo de entrada (SST) variando entre 1.500 mg/L y 5.500 mg/L.',
+      consigna: 'Identifica la concentración límite donde la Carga de Sólidos (SLR) supera los 140 kg/m²·día. ¿Qué consecuencias físicas tendría esta condición sobre el barredor de lodos en el modelo 3D?'
+    },
+    act3: {
+      titulo: 'Actividad 3: Caso de Estudio — Expansión de Planta Tratadora',
+      texto: 'Una PTAR necesita aumentar su capacidad de tratamiento debido a un aumento poblacional, pasando de 4.200 m³/día a 7.500 m³/día manteniendo los SST en 3.000 mg/L.',
+      consigna: 'Utilizando los rangos de referencia, determina el diámetro mínimo (D) necesario para que los 3 parámetros permanezcan en rango OK. Justifica tu propuesta con los valores obtenidos del simulador.'
+    },
+    fuente: 'Metcalf &amp; Eddy / Tchobanoglous et al. (2014), <em>Wastewater Engineering: Treatment and Resource Recovery</em>, 5.ª ed.'
+  };
+
+  const objetivosHTML = mode.objetivos.map(o => `<li>${o}</li>`).join('');
+
+  /* ==========================================================
+     RÚBRICA DE EVALUACIÓN (misma estructura para ambos modos,
+     alineada a los 4 Resultados de Aprendizaje)
+     ========================================================== */
+  const rubricaRows = [
+    {
+      criterio: 'RA1 — Sensibilidad hidráulica',
+      insuf: 'No identifica el caudal donde ocurre sobrecarga, o los valores registrados no coinciden con el simulador.',
+      sufic: 'Identifica el caudal de sobrecarga con apoyo, sin explicar la causa geométrica.',
+      bueno: 'Identifica correctamente el caudal crítico y explica de forma parcial la relación entre área/perímetro y el parámetro que falla primero.',
+      excel: 'Identifica el caudal crítico con precisión y explica con claridad la razón geométrica de por qué SOR o WLR fallan primero.'
+    },
+    {
+      criterio: 'RA2 — Interpretación de SOR/WLR/SLR',
+      insuf: 'Confunde el significado físico de los parámetros o no logra explicarlos.',
+      sufic: 'Explica el significado de cada parámetro de forma básica, con imprecisiones.',
+      bueno: 'Explica correctamente qué representa cada parámetro y menciona alguna consecuencia de excederlo.',
+      excel: 'Explica con precisión el significado físico de los tres parámetros y sus consecuencias operativas específicas al superarse.'
+    },
+    {
+      criterio: 'RA3 — Aplicación a ' + (isRelave ? 'minería' : 'tratamiento de aguas'),
+      insuf: 'No relaciona el proceso simulado con su aplicación de ingeniería real.',
+      sufic: 'Relaciona el proceso con su aplicación de forma general, sin profundizar.',
+      bueno: 'Relaciona correctamente el proceso simulado con su aplicación e identifica al menos una diferencia con el otro modo del simulador.',
+      excel: 'Relaciona el proceso con su aplicación real y contrasta con solidez ambos modos (agua/relave), incluyendo limitaciones del modelo.'
+    },
+    {
+      criterio: 'RA4 — Desafío de diseño',
+      insuf: 'No logra proponer un diámetro que cumpla los tres parámetros en rango.',
+      sufic: 'Propone un diámetro válido por ensayo-error, sin justificación técnica.',
+      bueno: 'Propone un diámetro válido y justifica su elección con los valores de SOR/WLR/SLR obtenidos.',
+      excel: 'Propone un diámetro válido, lo justifica técnicamente y reconoce qué información adicional (ensayos, normativa local) se requeriría en un diseño real.'
+    },
+    {
+      criterio: 'Reflexión final',
+      insuf: 'No responde o la respuesta no aborda la pregunta planteada.',
+      sufic: 'Responde de forma superficial, sin argumentar.',
+      bueno: 'Responde con argumentos razonables, considerando al menos un aspecto técnico y uno ético/social.',
+      excel: 'Responde con argumentación sólida, integrando aspectos técnicos, éticos y de responsabilidad profesional.'
+    }
+  ];
+
+  const rubricaHTML = rubricaRows.map(r => `
+    <tr>
+      <td style="padding:5px 6px; border:1px solid #C6D3CE; font-weight:bold; width:15%;">${r.criterio}</td>
+      <td style="padding:5px 6px; border:1px solid #C6D3CE; width:21.25%;">${r.insuf}</td>
+      <td style="padding:5px 6px; border:1px solid #C6D3CE; width:21.25%;">${r.sufic}</td>
+      <td style="padding:5px 6px; border:1px solid #C6D3CE; width:21.25%;">${r.bueno}</td>
+      <td style="padding:5px 6px; border:1px solid #C6D3CE; width:21.25%;">${r.excel}</td>
+    </tr>`).join('');
+
   const guideHTML = `
     <div style="font-family: Arial, sans-serif; padding: 20px; color: #0F2A35; line-height: 1.5;">
       
@@ -1381,7 +1499,7 @@ function downloadTeacherGuide() {
       <!-- Encabezado -->
       <div style="border-bottom: 3px solid #2E6E8E; padding-bottom: 8px; margin-bottom: 18px;">
         <h1 style="font-size: 18px; color: #1B4B63; margin: 0 0 4px 0;">
-          Guía Didáctica y Taller Práctico: Sedimentador Circular
+          Guía Didáctica y Taller Práctico: ${mode.tituloProceso}
         </h1>
         <p style="font-size: 11px; color: #5B6B67; margin: 0;">
           Aplicación de Carga Superficial (SOR), Carga sobre Vertedero (WLR) y Carga de Sólidos (SLR)
@@ -1391,12 +1509,12 @@ function downloadTeacherGuide() {
       <!-- Ficha Técnica -->
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 10.5px; background: #F7FAF9; border: 1px solid #C6D3CE;">
         <tr>
-          <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Asignaturas:</strong> Ingeniería Sanitaria, Tratamiento de Aguas Servidas, Mecánica de Fluidos.</td>
+          <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Asignaturas:</strong> ${mode.asignaturas}</td>
           <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Duración estimada:</strong> 60 a 90 minutos.</td>
         </tr>
         <tr>
           <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Modalidad:</strong> Individual o en parejas (Laboratorio Virtual / Taller).</td>
-          <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Herramienta:</strong> Simulador 3D Interactivo.</td>
+          <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Herramienta:</strong> Simulador 3D Interactivo — modo ${isRelave ? 'espesador de relave' : 'clarificador de agua'}.</td>
         </tr>
       </table>
 
@@ -1405,9 +1523,7 @@ function downloadTeacherGuide() {
         1. Objetivos de Aprendizaje
       </h2>
       <ul style="font-size: 11px; margin: 0; padding-left: 18px; line-height: 1.4;">
-        <li>Analizar la influencia del caudal (Q), diámetro (D) y concentración de sólidos (SST) en el funcionamiento de un clarificador secundario.</li>
-        <li>Evaluar condiciones operativas críticas (sobrecarga hidráulica o de sólidos) usando límites normativos de diseño.</li>
-        <li>Proponer soluciones técnicas de rediseño geométrico u operativo ante fallas de clarificación.</li>
+        ${objetivosHTML}
       </ul>
 
       <!-- 2. Ecuaciones -->
@@ -1418,6 +1534,7 @@ function downloadTeacherGuide() {
         <p style="margin: 2px 0;">• <strong>Carga Superficial (SOR):</strong> SOR = Q / A_s = Q / [π · (D/2)²] &nbsp;<em>[m³/m²·día]</em></p>
         <p style="margin: 2px 0;">• <strong>Carga sobre Vertedero (WLR):</strong> WLR = Q / L_v = Q / (π · D) &nbsp;<em>[m³/m·día]</em></p>
         <p style="margin: 2px 0;">• <strong>Carga de Sólidos (SLR):</strong> SLR = (Q · SST) / A_s &nbsp;<em>[kg/m²·día]</em></p>
+        <p style="margin: 4px 0 0; font-size: 9px; color: #5B6B67;">Fuente de los valores de referencia: ${mode.fuente}</p>
       </div>
 
       <!-- 3. Actividades -->
@@ -1426,22 +1543,44 @@ function downloadTeacherGuide() {
       </h2>
 
       <div style="font-size: 11px; margin-bottom: 10px;">
-        <strong>Actividad 1: Caudal Crítico e Hidráulica (Sensibilidad del SOR y WLR)</strong><br>
-        Fija el diámetro en 18.0 m y SST en 2.800 mg/L. Incrementa paulatinamente el caudal desde 4.000 hasta 10.000 m³/día.<br>
-        <em>Consigna:</em> ¿A qué caudal exacto se sobrepasa la Carga Superficial Máxima (32 m³/m²·día)? ¿Qué parámetro entra en estado "ALTO" primero: SOR o WLR? Explica la razón geométrica.
+        <strong>${mode.act1.titulo}</strong><br>
+        ${mode.act1.texto}<br>
+        <em>Consigna:</em> ${mode.act1.consigna}
       </div>
 
       <div style="font-size: 11px; margin-bottom: 10px;">
-        <strong>Actividad 2: Sobrecarga de Sólidos por Mal Funcionamiento de Purga</strong><br>
-        Fija el caudal en 5.000 m³/día y el diámetro en 16.0 m. Modifica la concentración de lodo de entrada (SST) variando entre 1.500 mg/L y 5.500 mg/L.<br>
-        <em>Consigna:</em> Identifica la concentración límite donde la Carga de Sólidos (SLR) supera los 140 kg/m²·día. ¿Qué consecuencias físicas tendría esta condición sobre el barredor de lodos en el modelo 3D?
+        <strong>${mode.act2.titulo}</strong><br>
+        ${mode.act2.texto}<br>
+        <em>Consigna:</em> ${mode.act2.consigna}
       </div>
 
       <div style="font-size: 11px; margin-bottom: 10px;">
-        <strong>Actividad 3: Caso de Estudio — Expansión de Planta Tratadora</strong><br>
-        Una PTAR necesita aumentar su capacidad de tratamiento debido a un aumento poblacional, pasando de 4.200 m³/día a 7.500 m³/día manteniendo los SST en 3.000 mg/L.<br>
-        <em>Desafío:</em> Utilizando los rangos de referencia, determina el diámetro mínimo (D) necesario para que los 3 parámetros permanezcan en rango OK. Justifica tu propuesta con los valores obtenidos del simulador.
+        <strong>${mode.act3.titulo}</strong><br>
+        ${mode.act3.texto}<br>
+        <em>Desafío:</em> ${mode.act3.consigna}
       </div>
+
+      <!-- 4. Rúbrica de evaluación -->
+      <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 18px 0 8px 0; page-break-before: always; padding-top: 10px;">
+        4. Rúbrica de Evaluación
+      </h2>
+      <p style="font-size: 10px; color: #5B6B67; margin: 0 0 8px 0;">
+        Escala: 1 = Insuficiente · 2 = Suficiente · 3 = Bueno · 4 = Excelente. Puntaje total sugerido: suma de los 5 criterios (máx. 20 puntos).
+      </p>
+      <table style="width: 100%; border-collapse: collapse; font-size: 8.5px; table-layout: fixed;">
+        <thead>
+          <tr style="background: #1B4B63; color: #fff;">
+            <th style="padding: 5px 6px; border: 1px solid #C6D3CE; text-align: left;">Criterio</th>
+            <th style="padding: 5px 6px; border: 1px solid #C6D3CE; text-align: left;">1 · Insuficiente</th>
+            <th style="padding: 5px 6px; border: 1px solid #C6D3CE; text-align: left;">2 · Suficiente</th>
+            <th style="padding: 5px 6px; border: 1px solid #C6D3CE; text-align: left;">3 · Bueno</th>
+            <th style="padding: 5px 6px; border: 1px solid #C6D3CE; text-align: left;">4 · Excelente</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rubricaHTML}
+        </tbody>
+      </table>
 
       <!-- Pie de página de la guía -->
       <div style="margin-top: 25px; border-top: 1px solid #C6D3CE; padding-top: 6px; font-size: 9.5px; color: #5B6B67; text-align: center;">
@@ -1452,7 +1591,7 @@ function downloadTeacherGuide() {
 
   const opt = {
     margin:       [10, 12, 10, 12],
-    filename:     'Guia_Docente_Simulador_Sedimentador_UBB.pdf',
+    filename:     `Guia_Docente_${isRelave ? 'Espesador_Relave' : 'Clarificador_Agua'}_UBB.pdf`,
     image:        { type: 'jpeg', quality: 0.98 },
     html2canvas:  { scale: 2, useCORS: true },
     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
