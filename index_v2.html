@@ -1518,48 +1518,215 @@ function downloadTeacherGuide() {
         </tr>
       </table>
 
-      <!-- 1. Objetivos -->
-      <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 14px 0 6px 0;">
-        1. Objetivos de Aprendizaje
-      </h2>
-      <ul style="font-size: 11px; margin: 0; padding-left: 18px; line-height: 1.4;">
-        ${objetivosHTML}
-      </ul>
+ <!-- 1. Competencia declarada -->
+<h2 style="font-size:13px;color:#1B4B63;border-left:4px solid #2E6E8E;padding-left:8px;margin:14px 0 6px 0;">
+1. Competencia declarada
+</h2>
 
-      <!-- 2. Ecuaciones -->
-      <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 16px 0 6px 0;">
-        2. Ecuaciones Base
-      </h2>
-      <div style="background: #EAF0EE; padding: 8px 12px; border-radius: 5px; font-size: 10.5px;">
-        <p style="margin: 2px 0;">• <strong>Carga Superficial (SOR):</strong> SOR = Q / A_s = Q / [π · (D/2)²] &nbsp;<em>[m³/m²·día]</em></p>
-        <p style="margin: 2px 0;">• <strong>Carga sobre Vertedero (WLR):</strong> WLR = Q / L_v = Q / (π · D) &nbsp;<em>[m³/m·día]</em></p>
-        <p style="margin: 2px 0;">• <strong>Carga de Sólidos (SLR):</strong> SLR = (Q · SST) / A_s &nbsp;<em>[kg/m²·día]</em></p>
-        <p style="margin: 4px 0 0; font-size: 9px; color: #5B6B67;">Fuente de los valores de referencia: ${mode.fuente}</p>
-      </div>
+<p style="font-size:11px;text-align:justify;">
+Esta guía tributa a la siguiente competencia de formación de ingeniería:
+</p>
 
-      <!-- 3. Actividades -->
-      <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 16px 0 8px 0;">
-        3. Actividades Prácticas Guiadas
-      </h2>
+<p style="font-size:11px;background:#F7FAF9;padding:10px;border-left:4px solid #2E6E8E;">
+Aplica principios y fundamentos de las ciencias de la ingeniería para analizar,
+diseñar y evaluar procesos de separación sólido-líquido, integrando criterios
+técnicos, operacionales y de sustentabilidad en contextos reales de tratamiento
+de aguas y de la industria minera.
+</p>
 
-      <div style="font-size: 11px; margin-bottom: 10px;">
-        <strong>${mode.act1.titulo}</strong><br>
-        ${mode.act1.texto}<br>
-        <em>Consigna:</em> ${mode.act1.consigna}
-      </div>
+<h2 style="font-size:13px;color:#1B4B63;border-left:4px solid #2E6E8E;padding-left:8px;margin:18px 0 6px 0;">
+2. Resultados de Aprendizaje
+</h2>
 
-      <div style="font-size: 11px; margin-bottom: 10px;">
-        <strong>${mode.act2.titulo}</strong><br>
-        ${mode.act2.texto}<br>
-        <em>Consigna:</em> ${mode.act2.consigna}
-      </div>
+<ul style="font-size:11px;line-height:1.5;">
+${objetivosHTML}
+</ul>
 
-      <div style="font-size: 11px; margin-bottom: 10px;">
-        <strong>${mode.act3.titulo}</strong><br>
-        ${mode.act3.texto}<br>
-        <em>Desafío:</em> ${mode.act3.consigna}
-      </div>
+<div style="background:#FFF8E8;border-left:5px solid #F0B429;padding:12px;margin-top:10px;">
+<b>Orientación para el docente</b>
 
+<p style="margin-top:8px;font-size:10.5px;">
+Antes de iniciar el laboratorio, explique brevemente el fundamento físico
+de los parámetros SOR, WLR y SLR, verificando que los estudiantes comprendan
+el significado operacional de cada uno antes de manipular el simulador.
+</p>
+</div>
+<!-- 3. Instrucciones de uso del simulador -->
+<h2 style="font-size:13px;color:#1B4B63;border-left:4px solid #2E6E8E;padding-left:8px;margin:16px 0 6px 0;">
+3. Instrucciones de uso del simulador
+</h2>
+
+<p style="font-size:11px;text-align:justify;">
+Antes de comenzar, solicite a los estudiantes abrir el Laboratorio Virtual y
+visualizar el video introductorio. Indique que utilicen los controles de
+Caudal (Q), Diámetro (D) y Sólidos Suspendidos (SST) para modificar distintos
+escenarios y registrar los resultados obtenidos mediante el panel de
+Resultados y el panel de Ecuaciones.
+</p>
+
+<div style="background:#F7FAF9;border-left:5px solid #2E6E8E;padding:10px;margin-top:10px;">
+
+<b>Orientaciones para el docente</b>
+
+<ul style="font-size:10.5px;line-height:1.5;margin-top:8px;">
+
+<li>Verifique que todos los estudiantes comprendan el significado físico de SOR, WLR y SLR antes de comenzar.</li>
+
+<li>Promueva que los estudiantes formulen hipótesis antes de modificar los parámetros del simulador.</li>
+
+<li>Solicite registrar cada cambio realizado y justificar técnicamente las respuestas.</li>
+
+<li>Favorezca la discusión grupal comparando diferentes configuraciones del simulador.</li>
+
+</ul>
+
+</div>
+
+<!-- 4. Ecuaciones de referencia -->
+
+<h2 style="font-size:13px;color:#1B4B63;border-left:4px solid #2E6E8E;padding-left:8px;margin:18px 0 6px 0;">
+4. Ecuaciones de referencia
+</h2>
+
+<div style="background:#EAF0EE;padding:8px 12px;border-radius:5px;font-size:10.5px;">
+
+<p><strong>Carga Superficial (SOR)</strong><br>
+SOR = Q / A<sub>s</sub>
+</p>
+
+<p><strong>Carga sobre Vertedero (WLR)</strong><br>
+WLR = Q / L<sub>v</sub>
+</p>
+
+<p><strong>Carga de Sólidos (SLR)</strong><br>
+SLR = (Q · SST) / A<sub>s</sub>
+</p>
+
+<p style="font-size:9px;color:#5B6B67;">
+${mode.fuente}
+</p>
+
+</div>
+
+   <!-- 4. Actividades prácticas -->
+<h2 style="font-size:13px;color:#1B4B63;border-left:4px solid #2E6E8E;padding-left:8px;margin:18px 0 8px 0;">
+4. Actividades prácticas
+</h2>
+
+<!-- ACTIVIDAD 1 -->
+<div style="border:1px solid #C6D3CE;border-radius:6px;padding:12px;margin-bottom:16px;background:#FCFCFC;">
+
+<h3 style="margin-top:0;color:#1B4B63;">${mode.act1.titulo}</h3>
+
+<p><strong>Objetivo:</strong> Analizar el efecto de las condiciones hidráulicas sobre el desempeño del proceso.</p>
+
+<p><strong>Procedimiento:</strong></p>
+
+<p style="margin-left:15px;">
+${mode.act1.texto}
+</p>
+
+<p><strong>Consigna para el estudiante</strong></p>
+
+<p style="margin-left:15px;">
+${mode.act1.consigna}
+</p>
+
+<div style="background:#F7FAF9;padding:10px;border-left:5px solid #2E6E8E;margin-top:10px;">
+
+<b>Orientaciones para el docente</b>
+
+<ul style="margin-top:8px;font-size:10px;line-height:1.5;">
+
+<li>Solicite que los estudiantes registren los valores obtenidos.</li>
+
+<li>Promueva la comparación entre distintos escenarios.</li>
+
+<li>Pregunte por la interpretación física de los cambios observados.</li>
+
+<li>No entregue inmediatamente la respuesta; favorezca la discusión.</li>
+
+</ul>
+
+</div>
+
+</div>
+
+<!-- ACTIVIDAD 2 -->
+
+<div style="border:1px solid #C6D3CE;border-radius:6px;padding:12px;margin-bottom:16px;background:#FCFCFC;">
+
+<h3 style="margin-top:0;color:#1B4B63;">${mode.act2.titulo}</h3>
+
+<p><strong>Objetivo:</strong> Interpretar el comportamiento de la carga de sólidos y sus implicancias operacionales.</p>
+
+<p><strong>Procedimiento:</strong></p>
+
+<p style="margin-left:15px;">
+${mode.act2.texto}
+</p>
+
+<p><strong>Consigna para el estudiante</strong></p>
+
+<p style="margin-left:15px;">
+${mode.act2.consigna}
+</p>
+
+<div style="background:#F7FAF9;padding:10px;border-left:5px solid #2E6E8E;margin-top:10px;">
+
+<b>Orientaciones para el docente</b>
+
+<ul style="margin-top:8px;font-size:10px;line-height:1.5;">
+
+<li>Solicite justificar cada respuesta con los parámetros del simulador.</li>
+
+<li>Favorezca la argumentación técnica.</li>
+
+<li>Compare respuestas entre grupos.</li>
+
+</ul>
+
+</div>
+
+</div>
+
+<!-- ACTIVIDAD 3 -->
+
+<div style="border:1px solid #C6D3CE;border-radius:6px;padding:12px;margin-bottom:16px;background:#FCFCFC;">
+
+<h3 style="margin-top:0;color:#1B4B63;">${mode.act3.titulo}</h3>
+
+<p><strong>Objetivo:</strong> Resolver un problema de diseño utilizando criterios de ingeniería.</p>
+
+<p><strong>Caso de estudio</strong></p>
+
+<p style="margin-left:15px;">
+${mode.act3.texto}
+</p>
+
+<p><strong>Desafío</strong></p>
+
+<p style="margin-left:15px;">
+${mode.act3.consigna}
+</p>
+
+<div style="background:#F7FAF9;padding:10px;border-left:5px solid #2E6E8E;margin-top:10px;">
+
+<b>Orientaciones para el docente</b>
+
+<ul style="margin-top:8px;font-size:10px;line-height:1.5;">
+
+<li>Solicite que cada propuesta sea justificada con datos del simulador.</li>
+
+<li>Discuta la factibilidad técnica de cada solución.</li>
+
+<li>Relacione el ejercicio con aplicaciones reales de ingeniería.</li>
+
+</ul>
+
+</div>
+
+</div>
       <!-- 4. Rúbrica de evaluación -->
       <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 18px 0 8px 0; page-break-before: always; padding-top: 10px;">
         4. Rúbrica de Evaluación
