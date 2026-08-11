@@ -732,12 +732,12 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
       <li>Se asume un <strong>vertedero perimetral completo y sin obstrucciones</strong>; no modela deflectores, muescas en V, ni distribución desigual del caudal alrededor del perímetro.</li>
       <li>Los cálculos son de <strong>estado estacionario</strong>: no representan el comportamiento transitorio ante variaciones bruscas de caudal, partidas/paradas, ni eventos de tormenta.</li>
       <li>No incorpora la <strong>velocidad de sedimentación real de las partículas</strong> (ensayos tipo columna de sedimentación, Kynch o Coe-Clevenger); usa rangos de referencia típicos de literatura, no curvas específicas de un mineral o lodo real.</li>
-      <li>No modela <strong>floculación, temperatura, viscosidad del fluido ni reología del material espesado</strong> — variables que en la práctica cambian significativamente el desempeño real de un sedimentador o espesador.</li>
+      <li>No modela <strong>floculación, temperatura, viscosidad del fluido ni reología del material espesado</strong>, ya que estas variables, en la práctica, cambian significativamente el desempeño real de un sedimentador o espesador.</li>
       <li>Los <strong>valores de diseño de referencia</strong> (SOR/WLR/SLR) son rangos orientativos de literatura general; el diseño real de una unidad específica requiere ensayos de laboratorio con la mezcla o mineral real y debe ser validado por un ingeniero especialista.</li>
       <li>La geometría 3D es una <strong>representación esquemática</strong> (proporciones simplificadas para claridad visual), no un plano de ingeniería a escala.</li>
     </ul>
     <p style="font-size:13px;line-height:1.6;color:var(--muted);margin:0;padding-top:.7rem;border-top:1px dashed var(--line);">
-      En modo <strong>clarificador de agua</strong>, estas simplificaciones son razonables para introducir los conceptos de SOR/WLR/SLR en un curso de ingeniería sanitaria. En modo <strong>espesador de relave</strong>, son especialmente relevantes: el diseño real de un espesador minero depende críticamente de ensayos de sedimentación del mineral específico (Coe-Clevenger/Kynch), que este simulador no reemplaza — aquí se usa solo para introducir el concepto y comparar cualitativamente ambos procesos.
+      Estas simplificaciones son razonables para introducir los conceptos de SOR/WLR/SLR en un curso de ingeniería sanitaria. Son más delicadas en modo espesador de relave: ahí el diseño real depende de ensayos de sedimentación del mineral específico (Coe-Clevenger/Kynch), que este simulador no reemplaza. Aquí solo sirve para introducir el concepto y comparar cualitativamente ambos procesos.
     </p>
   </div>
 
@@ -1673,7 +1673,7 @@ function buildGuideContent(isRelave){
 
   const competencia = 'Aplica principios y fundamentos de las ciencias de la ingeniería para analizar, diseñar y evaluar procesos de separación sólido-líquido, integrando criterios técnicos, operacionales y de sustentabilidad en contextos reales de tratamiento de aguas y de la industria minera.';
 
-  const comoUsar = `Esta guía se trabaja <strong>en paralelo con el simulador abierto en el navegador</strong>, no de forma aislada ni desconectada de la página. Cada actividad pide mover un control específico (los deslizadores de Caudal, Diámetro o SST), leer un valor exacto del panel "Ecuaciones en vivo", observar un cambio de color en el modelo 3D, o usar los botones de modo y "Vista en corte". Ninguna de estas respuestas se puede obtener con una calculadora aparte o buscando en internet: dependen de lo que observes en tu propia sesión con la herramienta. Actualmente el simulador está en <strong>modo ${isRelave ? 'espesador de relave' : 'clarificador de agua'}</strong>.`;
+  const comoUsar = `Esta guía fue creada para que se trabaje usando el simulador en el navegador como una herramienta de aprendizaje. Cada actividad pide modificar una variable específica: el caudal, el diámetro o el SST. Luego hay que leer un valor exacto del panel "Ecuaciones en vivo", observar un cambio de color en el modelo 3D, o usar los botones de modo y "Vista en corte". Las respuestas no se pueden obtener con una calculadora aparte o buscando en internet, ya que dependen de lo que observes tú con el simulador. Actualmente el simulador está en <strong>modo ${isRelave ? 'espesador de relave' : 'clarificador de agua'}</strong>.`;
 
   const mode = isRelave ? {
     tituloProceso: 'Espesador de Relaves Mineros',
@@ -1704,14 +1704,14 @@ function buildGuideContent(isRelave){
     tablaHeaders: ['Q (m³/día)', 'Ecuación SOR (con números)', 'Estado SOR', 'Color anillo vertedero'],
     tablaFilas: 6,
     consigna: '¿A qué caudal aproximado el estado de SOR cambia a "alto"? Compara ese valor con el que obtendrías en modo clarificador de agua (misma D). ¿Por qué un espesador de relaves debe operar a cargas superficiales mucho menores?',
-    notaDocente: 'Con D=18 m (Área≈254 m²) y SOR máx=15 m³/m²·día, el umbral teórico es Q≈3.817 m³/día — dentro del rango explorado. En modo agua, con la misma D, el umbral sube a Q≈8.143 m³/día (SOR máx=32). La brecha ilustra que los flóculos minerales/relave requieren mucha más área por unidad de caudal que el lodo biológico.'
+    notaDocente: 'Con D=18 m y SOR máx=15 m³/m²·día, el umbral teórico es de Q≈3.817 m³/día, dentro del rango explorado. En modo clarificador de agua, con la misma D, el umbral sube a Q≈8.143 m³/día (SOR máx=32). La brecha ilustra que los flóculos minerales/relave requieren mucha más área por unidad de caudal que el lodo biológico.'
   } : {
     titulo: 'Actividad 1 — Caudal Crítico e Hidráulica (RA1, RA2)',
     instruccion: 'En el simulador (modo clarificador de agua), fija Diámetro = 18.0 m y SST = 2.800 mg/L. Sube el Caudal (Q) en pasos de 1.000 m³/día, partiendo de 4.000 hasta 10.000. En cada paso, copia del panel "Ecuaciones en vivo" la ecuación de SOR con los números sustituidos, y registra el color del anillo del vertedero en el modelo 3D.',
     tablaHeaders: ['Q (m³/día)', 'Ecuación SOR (con números)', 'Estado SOR', 'Color anillo vertedero'],
     tablaFilas: 7,
     consigna: '¿A qué caudal exacto el estado de SOR cambia a "alto"? ¿Qué parámetro entra en estado "alto" primero, SOR o WLR? Explica la razón geométrica (relación área vs. perímetro).',
-    notaDocente: 'Con D=18 m (Área≈254 m², perímetro≈56.5 m): SOR máx=32 → Q crítico≈8.143 m³/día. WLR máx=250 → Q crítico≈14.137 m³/día (fuera del rango explorado). SOR limita primero porque el área crece con D² mientras el perímetro solo crece con D.'
+    notaDocente: 'Con D=18 m, el área es de aproximadamente 254 m² y el perímetro de 56.5 m. El SOR máximo (32) da un caudal crítico de Q≈8.143 m³/día, mientras que el WLR máximo (250) da Q≈14.137 m³/día, fuera del rango explorado. El SOR limita primero porque el área crece con D² mientras el perímetro solo crece con D.'
   };
 
   // ---- Actividad 2: sobrecarga de sólidos (SST) — RA2 ----
@@ -1721,14 +1721,14 @@ function buildGuideContent(isRelave){
     tablaHeaders: ['SST (mg/L)', 'Estado SOR', 'Ecuación SLR (con números)', 'Estado SLR'],
     tablaFilas: 5,
     consigna: 'Es muy probable que observes que SOR ya está en estado "alto" incluso con el SST más bajo, y que SLR nunca llega a "alto" dentro del rango del simulador. Matemáticamente, SLR = SOR × (SST en kg/m³). Si el SST máximo del simulador es 6 kg/m³, ¿qué tan grande tendría que ser el SOR para que el SLR alcance por sí solo su máximo de diseño (350 kg/m²·día)? Compara ese valor con el SOR máximo permitido (15 m³/m²·día) y explica qué te dice esto sobre cuál parámetro es realmente crítico al diseñar un espesador de relaves.',
-    notaDocente: 'Se necesitaría SOR≈58 m³/m²·día para que SLR llegue a 350 con SST=6 kg/m³ — casi 4 veces el SOR máximo permitido (15). Esto expone, dentro del rango de concentraciones que permite el slider (pensado en unidades de aguas residuales), que el SOR es el parámetro limitante real en este simulador, no el SLR. Es una simplificación intencional: en un espesador minero real, con pulpas de decenas de miles de mg/L, la relación se invierte. Vale la pena discutirlo abiertamente con el curso.'
+    notaDocente: 'Se necesitaría SOR≈58 m³/m²·día para que SLR llegue a 350 con SST=6 kg/m³, casi 4 veces el SOR máximo permitido que es de 15. Esto expone, dentro del rango de concentraciones que permite el slider (pensado en unidades de aguas residuales), que el parámetro limitante real en este simulador es el SOR y no el SLR. Es una simplificación intencional: en un espesador minero real, con pulpas de decenas de miles de mg/L, la relación se invierte. Vale la pena discutirlo abiertamente con el curso.'
   } : {
     titulo: 'Actividad 2 — Sobrecarga de Sólidos (RA2)',
     instruccion: 'Fija Q = 5.000 m³/día y D = 16.0 m (modo clarificador de agua). Mueve el deslizador de SST entre 1.500 y 6.000 mg/L. En cada paso, copia la ecuación de SLR con los números sustituidos y registra el estado.',
     tablaHeaders: ['SST (mg/L)', 'Ecuación SLR (con números)', 'Estado SLR'],
     tablaFilas: 5,
     consigna: '¿En qué concentración de SST aproximada el estado de SLR cambia a "alto"? ¿Qué consecuencia física tendría esta condición sobre el barredor de fondo del sedimentador?',
-    notaDocente: 'Con Q=5.000 m³/día, D=16 m (Área≈201 m²) y SLR máx=140 kg/m²·día, el umbral teórico es SST≈5.630 mg/L — dentro del rango explorado (1.500–6.000).'
+    notaDocente: 'Con Q=5.000 m³/día, D=16 m (Área≈201 m²) y SLR máx=140 kg/m²·día, el umbral teórico es SST≈5.630 mg/L, lo cual está dentro del rango explorado, de 1.500 a 6.000.'
   };
 
   // ---- Actividad 3: comparación entre modos — RA3 (idéntica en ambos casos, solo cambia el punto de partida) ----
@@ -1737,8 +1737,8 @@ function buildGuideContent(isRelave){
     instruccion: `Deja los controles en sus valores por defecto (Q=4.200 m³/día, D=18.0 m, SST=2.800 mg/L) sin modificarlos. Registra el estado de SOR/WLR/SLR en el modo actual (${isRelave ? 'espesador de relave' : 'clarificador de agua'}). Luego presiona el botón del modo opuesto. Vuelve a registrar los tres estados. Abre "Valores de diseño de referencia" y anota los rangos numéricos que cambiaron automáticamente. Finalmente, activa "Vista en corte" y compara la altura y el color del manto de sólidos entre ambos modos.`,
     tablaHeaders: ['Aspecto observado', 'Modo clarificador de agua', 'Modo espesador de relave'],
     tablaFilas: 6,
-    consigna: '¿Por qué el mismo caudal (4.200 m³/día) que resulta aceptable — o incluso conservador — para un clarificador de agua provoca sobrecarga en un espesador de relave? ¿Qué te dice esto sobre las diferencias físicas entre un lodo biológico y un relave mineral? Cita la fuente bibliográfica que aparece en el panel de referencia de cada modo.',
-    notaDocente: 'Con los valores por defecto: en modo agua, SOR≈16.5 (ok, borde bajo), WLR≈74.3 (bajo), SLR≈46.2 (bajo) — diseño conservador. En modo relave, el mismo caudal da SOR≈16.5, que ya supera el máximo de relave (15) → estado "alto", mientras WLR (74.3) queda "ok" y SLR (46.2) "bajo". El contraste es deliberado y no requiere mover ningún slider: solo cambiar de modo.'
+    consigna: '¿Por qué el mismo caudal de 4.200 m³/día, que resulta aceptable para un clarificador de agua, provoca sobrecarga en un espesador de relave? ¿Qué te dice esto sobre las diferencias físicas entre un lodo biológico y un relave mineral? Cita la fuente bibliográfica que aparece en el panel de referencia de cada modo.',
+    notaDocente: 'Con los valores por defecto, en modo clarificador de agua se obtiene SOR≈16.5 (ok, borde bajo), WLR≈74.3 (bajo) y SLR≈46.2 (bajo): un diseño conservador. En modo relave, el mismo caudal da SOR≈16.5, que ya supera el máximo de relave (15) y queda en estado "alto", mientras WLR (74.3) queda "ok" y SLR (46.2) "bajo". El contraste es deliberado y no requiere mover ningún slider, solo cambiar de modo.'
   };
 
   // ---- Actividad 4: desafío de diseño — RA4 ----
@@ -1754,7 +1754,7 @@ function buildGuideContent(isRelave){
     notaDocente: 'Para SOR≤32: Área≥7500/32≈234.4 m² → D≥17.3 m. Para SLR≥96 (mínimo, no crítico aquí) y ≤140: Área≥7500*3/140≈160.7 m² → D≥14.3 m (no limitante). D mínimo≈17.3–18 m: con el diámetro original de 18 m el sistema queda apenas dentro de rango.'
   };
 
-  const reflexion = 'Un mismo criterio de diseño —la sedimentación gravitacional— sostiene tanto la potabilización del agua que consume una comunidad como la gestión de relaves de una faena minera. ¿Qué responsabilidades técnicas y éticas asume un ingeniero o ingeniera al diseñar estos sistemas, considerando que una falla operacional puede afectar tanto la salud pública como el entorno ambiental?';
+  const reflexion = 'El mismo criterio de diseño de la sedimentación gravitacional se aplica tanto a la potabilización del agua como a la gestión de relaves de una faena minera. ¿Qué responsabilidades técnicas y éticas asume un ingeniero o ingeniera al diseñar estos sistemas, considerando que una falla operacional puede afectar tanto la salud pública como el entorno ambiental?';
 
   return { competencia, comoUsar, mode, act1, act2, act3, act4, reflexion, isRelave };
 }
