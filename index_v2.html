@@ -1070,6 +1070,7 @@ function initScene3D(){
   controls3d.dampingFactor = 0.08;
   controls3d.minDistance = 8;
   controls3d.maxDistance = 60;
+  controls3d.minPolarAngle = 0.15;
   controls3d.maxPolarAngle = Math.PI * 0.49;
 
   tankGroup = new THREE.Group();
@@ -1089,10 +1090,70 @@ function initScene3D(){
   });
 }
 
+/* ================================================================
+   NAVEGACIÓN POR TECLADO DEL VISOR 3D
+   Las flechas rotan la cámara alrededor del modelo (mismo efecto
+   que arrastrar con el mouse) y +/- controlan el zoom. Se manipula
+   directamente camera3d.position en coordenadas esféricas alrededor
+   de controls3d.target, y luego se deja que controls3d.update()
+   (llamado cada frame en animate3D) tome esa posición como base.
+   ================================================================ */
+
+const KEY_ROTATE_STEP = THREE.MathUtils.degToRad(4);   // 4° por pulsación
+const KEY_ZOOM_FACTOR = 1.08;                          // 8% de acercamiento/alejamiento
+
+function rotateScene3DByKeyboard(dTheta, dPhi, zoomFactor){
+  if(!camera3d || !controls3d) return;
+
+  const offset = new THREE.Vector3().copy(camera3d.position).sub(controls3d.target);
+  const spherical = new THREE.Spherical().setFromVector3(offset);
+
+  spherical.theta += dTheta;
+  spherical.phi += dPhi;
+
+  const minPolar = controls3d.minPolarAngle ?? 0.15;
+  const maxPolar = controls3d.maxPolarAngle ?? Math.PI * 0.49;
+  spherical.phi = THREE.MathUtils.clamp(spherical.phi, minPolar, maxPolar);
+
+  if(zoomFactor){
+    spherical.radius *= zoomFactor;
+    spherical.radius = THREE.MathUtils.clamp(spherical.radius, controls3d.minDistance, controls3d.maxDistance);
+  }
+
+  spherical.makeSafe();
+  offset.setFromSpherical(spherical);
+  camera3d.position.copy(controls3d.target).add(offset);
+  controls3d.update();
+}
+
 document.getElementById('scene3d').addEventListener('keydown', (event) => {
-  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight' ||
-      event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-    event.preventDefault();
+  switch(event.key){
+    case 'ArrowLeft':
+      event.preventDefault();
+      rotateScene3DByKeyboard(KEY_ROTATE_STEP, 0, null);
+      break;
+    case 'ArrowRight':
+      event.preventDefault();
+      rotateScene3DByKeyboard(-KEY_ROTATE_STEP, 0, null);
+      break;
+    case 'ArrowUp':
+      event.preventDefault();
+      rotateScene3DByKeyboard(0, -KEY_ROTATE_STEP, null);
+      break;
+    case 'ArrowDown':
+      event.preventDefault();
+      rotateScene3DByKeyboard(0, KEY_ROTATE_STEP, null);
+      break;
+    case '+':
+    case '=':
+      event.preventDefault();
+      rotateScene3DByKeyboard(0, 0, 1 / KEY_ZOOM_FACTOR);
+      break;
+    case '-':
+    case '_':
+      event.preventDefault();
+      rotateScene3DByKeyboard(0, 0, KEY_ZOOM_FACTOR);
+      break;
   }
 });
 
