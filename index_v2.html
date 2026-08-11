@@ -908,8 +908,18 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
         </div>
 
         <div class="diagram-box">
-          <div id="scene3d" role="img" aria-label="Modelo 3D rotable del sedimentador circular en modo espesador de relave. Es una visualización complementaria; los valores numéricos equivalentes están disponibles en el panel de Resultados." style="width:100%;max-width:520px;height:340px;border-radius:8px;background:#DCE9E4;overflow:hidden;"></div>
+          <div id="scene3d"
+          role="img"
+          tabindex="0"
+          aria-label="Modelo 3D rotable del sedimentador circular en modo espesador de relave. Es una visualización complementaria; los valores numéricos equivalentes están disponibles en el panel de Resultados." 
+          aria-describedby="scene3d-help"
+          style="width:100%;max-width:520px;height:340px;border-radius:8px;background:#DCE9E4;overflow:hidden;"></div>
         </div>
+          <p id="scene3d-help"
+          style="font-size:12px;color:var(--muted);text-align:center;margin:.5rem 0 0;">
+          Para utilizar el modelo con teclado, selecciónelo y use las teclas de flecha para rotar y + o − para acercar o alejar.
+          </p>
+           
         <div style="display:flex;flex-wrap:wrap;gap:.9rem;justify-content:center;margin-top:.8rem;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);">
           <span><span aria-hidden="true" style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#014898;margin-right:5px;vertical-align:middle;" id="legendInletDot"></span><span id="legendInlet">Entrada de alimentación</span></span>
           <span><span aria-hidden="true" style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#2E8B57;margin-right:5px;vertical-align:middle;"></span><span id="legendOutlet">Salida de agua clarificada</span></span>
@@ -1165,6 +1175,13 @@ function initScene3D(){
     renderer3d.setSize(w2,h2);
   });
 }
+
+document.getElementById('scene3d').addEventListener('keydown', (event) => {
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight' ||
+      event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+    event.preventDefault();
+  }
+});
 
 function pointAlongPath(points, t){
   const segLens = [];
