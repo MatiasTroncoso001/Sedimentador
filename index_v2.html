@@ -1,13 +1,408 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
+<html lang="es"><head>
+    <script>
+      (function() {
+        // Capture host references before any artifact code runs: Window.parent
+        // is [Replaceable] (a top-level `var parent` in artifact code would
+        // replace the accessor with a data property), and a top-level
+        // `const crypto` would shadow the global — either would otherwise
+        // silently break the bridge for artifacts that worked before.
+        const realParent = window.parent;
+        const cryptoObj = window.crypto;
+        // html-to-image is only used by takeScreenshot: fetched on first use, not as a
+        // parser-blocking tag. Native fetch, captured before the proxy override below.
+        const realFetch = typeof window.fetch === 'function' ? window.fetch.bind(window) : null;
+        const HTML_TO_IMAGE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.13/html-to-image.min.js";
+        const HTML_TO_IMAGE_INTEGRITY = "sha512-iZ2ORl595Wx6miw+GuadDet4WQbdSWS3JLMoNfY8cRGoEFy6oT3G9IbcrBeL6AfkgpA51ETt/faX6yLV+/gFJg==";
+        let htmlToImageLoad = null;
+        const loadHtmlToImage = () => {
+          if (!htmlToImageLoad) {
+            htmlToImageLoad = (realFetch
+              ? realFetch(HTML_TO_IMAGE_SRC, { integrity: HTML_TO_IMAGE_INTEGRITY, credentials: 'omit', referrerPolicy: 'no-referrer' })
+              : Promise.reject(new Error('fetch unavailable'))
+            )
+              .then((res) => {
+                if (!res.ok) throw new Error('html-to-image failed to load (' + res.status + ')');
+                return res.text();
+              })
+              .then((source) => {
+                // UMD bundle: hide the artifact's AMD/CommonJS globals so it takes the
+                // window-global branch; inline script text runs synchronously on insert.
+                const hidden = ['define', 'module', 'exports'].map((k) => {
+                  const entry = { k, own: Object.prototype.hasOwnProperty.call(window, k), v: window[k] };
+                  try { window[k] = undefined; } catch (e) {}
+                  return entry;
+                });
+                try {
+                  const el = document.createElement('script');
+                  el.text = source;
+                  (document.head || document.documentElement).appendChild(el);
+                } finally {
+                  hidden.forEach(({ k, own, v }) => {
+                    try { if (own) { window[k] = v; } else { delete window[k]; } } catch (e) {}
+                  });
+                }
+                if (!window.htmlToImage) throw new Error('html-to-image unavailable after load');
+                return window.htmlToImage;
+              });
+            // A failed load may be transient; let the next screenshot retry.
+            htmlToImageLoad.catch(() => { htmlToImageLoad = null; });
+          }
+          return htmlToImageLoad;
+        };
+        // crypto.randomUUID exists only in Secure Contexts; fall back to a
+        // unique non-crypto id elsewhere (http://LAN-IP dev flows) —
+        // uniqueness is what the bridge needs, unpredictability is
+        // defense-in-depth on top of the source guards.
+        const newRequestId =
+          cryptoObj && typeof cryptoObj.randomUUID === "function"
+            ? function () { return cryptoObj.randomUUID(); }
+            : function () { return Date.now() + "-" + Math.random(); };
+        const originalConsole = window.console;
+        window.console = {
+          log: (...args) => {
+            originalConsole.log(...args);
+            realParent.postMessage({ type: 'console', message: args.join(' ') }, '*');
+          },
+          error: (...args) => {
+            originalConsole.error(...args);
+            realParent.postMessage({ type: 'console', message: 'Error: ' + args.join(' ') }, '*');
+          },
+          warn: (...args) => {
+            originalConsole.warn(...args);
+            realParent.postMessage({ type: 'console', message: 'Warning: ' + args.join(' ') }, '*');
+          }
+        };
+
+        // Bridge request ids are crypto-random (not sequential) so they
+        // cannot be predicted by other frames in the tab.
+        let callbacksMap = new Map();
+        let streamControllers = new Map();
+        
+        window.claude = {
+          complete: (prompt) => {
+            return new Promise((resolve, reject) => {
+              const id = newRequestId();
+              callbacksMap.set(id, { resolve, reject });
+              realParent.postMessage({ type: 'claudeComplete', id, prompt }, '*');
+            });
+          }
+        };
+
+        window.storage = {
+          get: (key, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = newRequestId();
+              callbacksMap.set(id, { resolve, reject });
+              realParent.postMessage({ type: 'storageGet', id, key, shared }, '*');
+            });
+          },
+          set: (key, value, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = newRequestId();
+              callbacksMap.set(id, { resolve, reject });
+              realParent.postMessage({ type: 'storageSet', id, key, value, shared }, '*');
+            });
+          },
+          delete: (key, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = newRequestId();
+              callbacksMap.set(id, { resolve, reject });
+              realParent.postMessage({ type: 'storageDelete', id, key, shared }, '*');
+            });
+          },
+          list: (prefix, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = newRequestId();
+              callbacksMap.set(id, { resolve, reject });
+              realParent.postMessage({ type: 'storageList', id, prefix, shared }, '*');
+            });
+          }
+        };
+
+        let pendingBlobs = new Map();
+        URL.createObjectURL = (blob) => {
+          // Store the blob and create an ID and URL for it
+          const blobId = `blob-${Date.now()}-${Math.random()}`;
+          pendingBlobs.set(blobId, blob);
+          return `blob-request://${blobId}`;
+        };
+
+        URL.revokeObjectURL = (url) => {
+          // Remove the blob from our store
+          const blobId = url.replace("blob-request://", "");
+          pendingBlobs.delete(blobId);
+        };
+
+        const getBlobFromURL = (url) => {
+          const blobId = url.replace("blob-request://", "");
+          return pendingBlobs.get(blobId);
+        };
+
+        // Override global fetch with streaming support
+        window.fetch = (url, init = {}) => {
+          return new Promise((resolve, reject) => {
+            const id = newRequestId();
+            const channelId = `fetch-${id}-${Date.now()}`;
+            
+            callbacksMap.set(id, { 
+              resolve: (response) => {
+                // Null-body statuses: Response(stream, {status: 204}) throws
+                // per the Fetch spec, which would escape this resolver and
+                // hang the artifact's await forever.
+                if (response.status === 204 || response.status === 205 || response.status === 304) {
+                  try {
+                    resolve(new Response(null, {
+                      status: response.status,
+                      statusText: response.statusText,
+                      headers: response.headers
+                    }));
+                  } catch (err) {
+                    // Invalid statusText/header bytes can throw here too.
+                    reject(new TypeError(
+                      'Bridge fetch: unconstructable response (status ' + response.status + ')'
+                    ));
+                  }
+                  return;
+                }
+                // Create a ReadableStream for the response body
+                const stream = new ReadableStream({
+                  start(controller) {
+                    streamControllers.set(channelId, controller);
+                  },
+                  cancel() {
+                    streamControllers.delete(channelId);
+                  }
+                });
+                
+                // Create and return the Response with the stream. Response()
+                // requires status in [200, 599]; an opaque/no-cors fetch
+                // forwards status 0, which would throw here and escape the
+                // resolver, hanging the artifact's await. Surface it as a
+                // network-error-shaped rejection instead.
+                try {
+                  resolve(new Response(stream, {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: response.headers
+                  }));
+                } catch (err) {
+                  streamControllers.delete(channelId);
+                  reject(new TypeError(
+                    'Bridge fetch: unconstructable response (status ' + response.status + ')'
+                  ));
+                }
+              },
+              reject,
+              channelId
+            });
+            
+            realParent.postMessage({
+              type: 'proxyFetch',
+              id,
+              url,
+              init,
+              channelId
+            }, '*');
+          });
+        };
+
+        window.addEventListener('message', async (event) => {
+          // Only the embedding parent may drive the bridge — sibling and
+          // nested frames can also postMessage into this window.
+          if (event.source !== realParent) return;
+          if (event.data.type === 'takeScreenshot') {
+            // Echo the request's nonce so the requester can correlate the
+            // reply to ITS request — a reply without the expected nonce
+            // (e.g. from a stale pre-remount artifact) is ignored upstream.
+            const screenshotNonce = event.data.nonce;
+            const rootElement = document.getElementById('artifacts-component-root-html');
+            if (!rootElement) {
+              realParent.postMessage({
+                type: 'screenshotError',
+                nonce: screenshotNonce,
+                error: new Error('Root element not found'),
+              }, '*');
+              return;
+            }
+            // Catch CDN load failures and toPng errors so the parent always
+            // gets a response instead of hanging forever.
+            try {
+              const htmlToImage = await loadHtmlToImage();
+              const screenshot = await htmlToImage.toPng(rootElement, {
+                imagePlaceholder:
+                  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjePDgwX8ACOQDoNsk0PMAAAAASUVORK5CYII=",
+              });
+              realParent.postMessage({
+                type: 'screenshotData',
+                nonce: screenshotNonce,
+                data: screenshot,
+              }, '*');
+            } catch (err) {
+              realParent.postMessage({
+                type: 'screenshotError',
+                nonce: screenshotNonce,
+                error: err instanceof Error ? err : new Error(String(err)),
+              }, '*');
+            }
+          } else if (event.data.type === 'claudeComplete') {
+            const callback = callbacksMap.get(event.data.id);
+            if (!callback) return;
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.completion);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'proxyFetchResponse') {
+            const callback = callbacksMap.get(event.data.id);
+            if (!callback) return;
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+              callbacksMap.delete(event.data.id);
+            } else {
+              // Initial response with headers, status, etc.
+              callback.resolve({
+                status: event.data.status,
+                statusText: event.data.statusText,
+                headers: event.data.headers
+              });
+              // Don't delete the callback yet if streaming
+              if (!event.data.body) {
+                callbacksMap.delete(event.data.id);
+              }
+            }
+          } else if (event.data.type === 'proxyFetchStream') {
+            // Handle streaming data chunks
+            const controller = streamControllers.get(event.data.channelId);
+            if (controller) {
+              if (event.data.error) {
+                controller.error(new Error(event.data.error));
+                streamControllers.delete(event.data.channelId);
+              } else if (event.data.done) {
+                controller.close();
+                streamControllers.delete(event.data.channelId);
+                // Clean up the callback
+                const callback = Array.from(callbacksMap.entries()).find(
+                  ([_, value]) => value.channelId === event.data.channelId
+                );
+                if (callback) {
+                  callbacksMap.delete(callback[0]);
+                }
+              } else if (event.data.chunk) {
+                controller.enqueue(new Uint8Array(event.data.chunk));
+              }
+            }
+          } else if (event.data.type === 'storageGet') {
+            const callback = callbacksMap.get(event.data.id);
+            if (!callback) return;
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'storageSet') {
+            const callback = callbacksMap.get(event.data.id);
+            if (!callback) return;
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'storageDelete') {
+            const callback = callbacksMap.get(event.data.id);
+            if (!callback) return;
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'storageList') {
+            const callback = callbacksMap.get(event.data.id);
+            if (!callback) return;
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          }
+        });
+
+        window.addEventListener('click', (event) => {
+          const isEl = event.target instanceof HTMLElement;
+          if (!isEl) return;
+    
+          // find ancestor links
+          const linkEl = event.target.closest("a");
+          if (!linkEl || !linkEl.href) return;
+    
+          event.preventDefault();
+          event.stopImmediatePropagation();
+    
+          if (linkEl.href.startsWith("blob-request:")) {
+            const blob = getBlobFromURL(linkEl.href);
+            if (!blob) return;
+            void blob.arrayBuffer().then((data) => {
+              realParent.postMessage({
+                type: "downloadFile",
+                filename: linkEl.download,
+                data,
+                mimeType: blob.type || "application/octet-stream",
+              });
+            });
+          } else if (linkEl.href.startsWith("data:")) {
+            const [header, base64Data] = linkEl.href.split(",");
+            const mimeMatch = header.match(/data:([^;]+)/);
+            const mimeType = mimeMatch ? mimeMatch[1] : "application/octet-stream";
+            const binaryString = atob(base64Data);
+            const data = Uint8Array.from(binaryString, (c) =>
+              c.charCodeAt(0),
+            ).buffer;
+            realParent.postMessage({
+              type: "downloadFile",
+              filename: linkEl.download,
+              data,
+              mimeType,
+            });
+          } else {
+            let linkUrl;
+            try {
+              linkUrl = new URL(linkEl.href);
+            } catch (error) {
+              return;
+            }
+    
+            if (linkUrl.hostname === window.location.hostname) return;
+      
+            realParent.postMessage({
+              type: 'openExternal',
+              href: linkEl.href,
+            }, '*');
+          }
+      });
+
+        const originalOpen = window.open;
+        window.open = function (url) {
+          realParent.postMessage({
+            type: "openExternal",
+            href: url,
+          }, "*");
+        };
+
+        window.addEventListener('error', (event) => {
+          realParent.postMessage({ type: 'console', message: 'Uncaught Error: ' + event.message }, '*');
+        });
+      })();
+    </script>
+  
 
 <meta charset="UTF-8">
 
-<meta 
-name="viewport" 
-content="width=device-width, initial-scale=1.0"
->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 
 <!-- =========================================================
@@ -55,18 +450,14 @@ Laboratorio Virtual de Sedimentadores Circulares | REA UBB
 </title>
 
 
-<meta 
-name="description"
-content="
+<meta name="description" content="
 Laboratorio virtual interactivo para el aprendizaje del diseño y operación
 de sedimentadores circulares aplicados al tratamiento de aguas y espesamiento
 de relaves mineros.
 ">
 
 
-<meta
-name="keywords"
-content="
+<meta name="keywords" content="
 sedimentador circular,
 clarificador,
 espesador,
@@ -83,151 +474,58 @@ educación abierta
 ">
 
 
-<meta
-name="author"
-content="Matías Troncoso Araya - Universidad del Bío-Bío"
->
+<meta name="author" content="Matías Troncoso Araya - Universidad del Bío-Bío">
 
 
-<meta
-name="license"
-content="Creative Commons BY-SA 4.0"
->
+<meta name="license" content="Creative Commons BY-SA 4.0">
 
 
-<meta
-property="og:title"
-content="Laboratorio Virtual de Sedimentadores Circulares"
->
+<meta property="og:title" content="Laboratorio Virtual de Sedimentadores Circulares">
 
 
-<meta
-property="og:description"
-content="
+<meta property="og:description" content="
 Simulador interactivo para comprender procesos de sedimentación
 aplicados al tratamiento de aguas y espesamiento de relaves mineros.
-"
->
+">
 
 
-<meta
-property="og:type"
-content="website"
->
+<meta property="og:type" content="website">
 <!-- =========================================================
      METADATOS EDUCATIVOS DEL RECURSO
      ========================================================= -->
 
-<meta
-  name="date"
-  content="2026"
->
-<meta
-  name="language"
-  content="es"
->
-<meta
-  name="keywords"
-  content="sedimentación, sedimentadores circulares, separación sólido-líquido, tratamiento de aguas residuales, espesamiento de relaves, ingeniería, SOR, WLR, SLR"
->
-<meta
-  name="resource-type"
-  content="Laboratorio virtual interactivo"
->
-<meta
-  name="educational-level"
-  content="Educación superior"
->
-<meta
-  name="audience"
-  content="Estudiantes universitarios de carreras de ingeniería"
->
-<meta
-  name="educational-duration"
-  content="90 minutos"
->
-<meta
-  name="subject"
-  content="Ingeniería, sedimentación, separación sólido-líquido, tratamiento de aguas residuales y espesamiento de relaves"
->
-<meta
-  name="version"
-  content="1.1"
->
+<meta name="date" content="2026">
+<meta name="language" content="es">
+<meta name="keywords" content="sedimentación, sedimentadores circulares, separación sólido-líquido, tratamiento de aguas residuales, espesamiento de relaves, ingeniería, SOR, WLR, SLR">
+<meta name="resource-type" content="Laboratorio virtual interactivo">
+<meta name="educational-level" content="Educación superior">
+<meta name="audience" content="Estudiantes universitarios de carreras de ingeniería">
+<meta name="educational-duration" content="90 minutos">
+<meta name="subject" content="Ingeniería, sedimentación, separación sólido-líquido, tratamiento de aguas residuales y espesamiento de relaves">
+<meta name="version" content="1.1">
 <!-- =========================================================
      METADATOS DUBLIN CORE
      ========================================================= -->
-<meta
-  name="DC.title"
-  content="Laboratorio Virtual de Sedimentadores Circulares"
->
-<meta
-  name="DC.creator"
-  content="Matías Troncoso Araya"
->
-<meta
-  name="DC.contributor"
-  content="Universidad del Bío-Bío"
->
-<meta
-  name="DC.description"
-  content="Recurso Educativo Abierto para estudiantes universitarios de carreras de ingeniería, orientado al análisis de procesos de separación sólido-líquido mediante sedimentación gravitacional, con aplicaciones en tratamiento de aguas y espesamiento de relaves mineros."
->
-<meta
-  name="DC.subject"
-  content="Sedimentación; sedimentadores circulares; separación sólido-líquido; tratamiento de aguas residuales; espesamiento de relaves; ingeniería"
->
-<meta
-  name="DC.language"
-  content="es"
->
-<meta
-  name="DC.type"
-  content="InteractiveResource"
->
-<meta
-  name="DC.format"
-  content="text/html"
->
-<meta
-  name="DC.date"
-  content="2026"
->
-<meta
-  name="DC.license"
-  content="CC BY-SA 4.0"
->
-<meta
-  name="DC.audience"
-  content="Estudiantes universitarios de carreras de ingeniería"
->
-<meta
-  name="DC.educationLevel"
-  content="Educación superior"
->
+<meta name="DC.title" content="Laboratorio Virtual de Sedimentadores Circulares">
+<meta name="DC.creator" content="Matías Troncoso Araya">
+<meta name="DC.contributor" content="Universidad del Bío-Bío">
+<meta name="DC.description" content="Recurso Educativo Abierto para estudiantes universitarios de carreras de ingeniería, orientado al análisis de procesos de separación sólido-líquido mediante sedimentación gravitacional, con aplicaciones en tratamiento de aguas y espesamiento de relaves mineros.">
+<meta name="DC.subject" content="Sedimentación; sedimentadores circulares; separación sólido-líquido; tratamiento de aguas residuales; espesamiento de relaves; ingeniería">
+<meta name="DC.language" content="es">
+<meta name="DC.type" content="InteractiveResource">
+<meta name="DC.format" content="text/html">
+<meta name="DC.date" content="2026">
+<meta name="DC.license" content="CC BY-SA 4.0">
+<meta name="DC.audience" content="Estudiantes universitarios de carreras de ingeniería">
+<meta name="DC.educationLevel" content="Educación superior">
 <!-- =========================================================
      RESULTADOS DE APRENDIZAJE
      ========================================================= -->
-<meta
-  name="learning-outcome"
-  content="RA1: Analizar la influencia del caudal, diámetro del sedimentador y concentración de sólidos sobre el desempeño del proceso de sedimentación."
->
-<meta
-  name="learning-outcome"
-  content="RA2: Interpretar los parámetros de diseño SOR, WLR y SLR como indicadores de operación."
->
-<meta
-  name="learning-outcome"
-  content="RA3: Relacionar los principios de separación sólido-líquido con aplicaciones de ingeniería, incluyendo tratamiento de aguas residuales y espesamiento de relaves mineros."
->
-<meta
-  name="learning-outcome"
-  content="RA4: Evaluar alternativas de operación y diseño mediante la simulación de diferentes escenarios hidráulicos y de concentración de sólidos."
->     
-<meta
-property="og:locale"
-content="es_CL"
->
+<meta name="learning-outcome" content="RA1: Analizar la influencia del caudal, diámetro del sedimentador y concentración de sólidos sobre el desempeño del proceso de sedimentación.">
+<meta name="learning-outcome" content="RA2: Interpretar los parámetros de diseño SOR, WLR y SLR como indicadores de operación.">
+<meta name="learning-outcome" content="RA3: Relacionar los principios de separación sólido-líquido con aplicaciones de ingeniería, incluyendo tratamiento de aguas residuales y espesamiento de relaves mineros.">
+<meta name="learning-outcome" content="RA4: Evaluar alternativas de operación y diseño mediante la simulación de diferentes escenarios hidráulicos y de concentración de sólidos.">     
+<meta property="og:locale" content="es_CL">
 <!-- =========================================================
      SCHEMA.ORG - RECURSO EDUCATIVO
      ========================================================= -->
@@ -550,7 +848,7 @@ content="es_CL"
   }
 </style>
 </head>
-<body>
+<body id="artifacts-component-root-html">
 
 <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
@@ -712,12 +1010,7 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
 
 </ul>
     <div class="video-embed">
-      <iframe
-        src="https://www.youtube.com/embed/2I_eYvd38QU"
-        title="Partes de un sedimentador circular"
-        frameborder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowfullscreen>
+      <iframe src="https://www.youtube.com/embed/2I_eYvd38QU" title="Partes de un sedimentador circular" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen="">
       </iframe>
     </div>
     <p class="hint" style="margin-top:.5rem;">Video explicativo de las partes del sedimentador (pozo central, deflector, vertedero, rastras de fondo, poza de lodos).</p>
@@ -747,18 +1040,18 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
       <h2>Escenario</h2>
 
       <div class="field">
-        <label for="q">Caudal de entrada (Q) <span class="val" id="qVal" aria-hidden="true">4200 m³/día</span></label>
-        <input type="range" id="q" min="500" max="15000" step="50" value="4200" aria-valuetext="4200 metros cúbicos por día">
+        <label for="q">Caudal de entrada (Q) <span class="val" id="qVal" aria-hidden="true">4.200 m³/día</span></label>
+        <input type="range" id="q" min="500" max="15000" step="50" value="4200" aria-valuetext="4.200 metros cúbicos por día">
       </div>
 
       <div class="field">
-        <label for="d">Diámetro del sedimentador (D) <span class="val" id="dVal" aria-hidden="true">18.0 m</span></label>
+        <label for="d">Diámetro del sedimentador (D) <span class="val" id="dVal" aria-hidden="true">18,0 m</span></label>
         <input type="range" id="d" min="4" max="40" step="0.5" value="18" aria-valuetext="18,0 metros">
       </div>
 
       <div class="field">
-        <label for="c">Sólidos suspendidos (SST) <span class="val" id="cVal" aria-hidden="true">2800 mg/L</span></label>
-        <input type="range" id="c" min="500" max="6000" step="50" value="2800" aria-valuetext="2800 miligramos por litro" aria-describedby="cHint">
+        <label for="c">Sólidos suspendidos (SST) <span class="val" id="cVal" aria-hidden="true">2.800 mg/L</span></label>
+        <input type="range" id="c" min="500" max="6000" step="50" value="2800" aria-valuetext="2.800 miligramos por litro" aria-describedby="cHint">
         <div class="hint" id="cHint">Concentración de sólidos en el licor mezclado que ingresa al sedimentador.</div>
       </div>
 
@@ -775,9 +1068,7 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
           <div class="field"><label for="slrMax">SLR máx (kg/m²·día)</label><input type="number" id="slrMax" value="140"></div>
         </div>
         <div class="hint" style="margin-top:.6rem;">Se precargan automáticamente al cambiar de modo (clarificador/espesador) y son editables por el docente para adaptar a distintos manuales de diseño o normativas locales.</div>
-        <p id="refsSourceText" style="font-size:11px;line-height:1.6;color:var(--muted);margin:.8rem 0 0;padding-top:.7rem;border-top:1px dashed var(--line);">
-          <strong>Fuente:</strong> Metcalf &amp; Eddy / Tchobanoglous, G. et al. (2014). <em>Wastewater Engineering: Treatment and Resource Recovery</em>, 5.ª ed. McGraw-Hill. Rangos de SOR y SLR para sedimentación secundaria posterior a lodos activados convencionales, a caudal medio. El rango de WLR es una compilación de referencias complementarias (WEF, Manual of Practice N.º 8).
-        </p>
+        <p id="refsSourceText" style="font-size:11px;line-height:1.6;color:var(--muted);margin:.8rem 0 0;padding-top:.7rem;border-top:1px dashed var(--line);"><strong>Fuente:</strong> Metcalf &amp; Eddy / Tchobanoglous, G. et al. (2014). <em>Wastewater Engineering: Treatment and Resource Recovery</em>, 5.ª ed. McGraw-Hill. Rangos de SOR y SLR para sedimentación secundaria posterior a lodos activados convencionales, a caudal medio. El rango de WLR es una compilación de referencias complementarias (WEF, Manual of Practice N.º 8).</p>
       </details>
 
       <div class="divider"></div>
@@ -786,15 +1077,15 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
         <h2>Ecuaciones en vivo</h2>
         <div class="eq-row">
           <div class="eq-name">SOR<small>Carga superficial</small></div>
-          <div class="eq-formula" id="eqSor"></div>
+          <div class="eq-formula" id="eqSor">SOR = Q / Área <span class="op">=</span> <span class="num">4.200</span> <span class="op">/</span> <span class="num">254,5</span> <span class="op">=</span> <span class="res">16,5 m³/m²·día</span></div>
         </div>
         <div class="eq-row">
           <div class="eq-name">WLR<small>Carga de vertedero</small></div>
-          <div class="eq-formula" id="eqWlr"></div>
+          <div class="eq-formula" id="eqWlr">WLR = Q / (π·D) <span class="op">=</span> <span class="num">4.200</span> <span class="op">/</span> <span class="num">56,5</span> <span class="op">=</span> <span class="res">74,3 m³/m·día</span></div>
         </div>
         <div class="eq-row">
           <div class="eq-name">SLR<small>Carga de sólidos</small></div>
-          <div class="eq-formula" id="eqSlr"></div>
+          <div class="eq-formula" id="eqSlr">SLR = Q·SST / Área <span class="op">=</span> <span class="num">4.200</span><span class="op">×</span><span class="num">2,80</span> <span class="op">/</span> <span class="num">254,5</span> <span class="op">=</span> <span class="res">46,2 kg/m²·día</span></div>
         </div>
       </div>
     </div>
@@ -804,40 +1095,29 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
         <h2>Modelo 3D <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);font-size:12px;">— arrastra para rotar, scroll para acercar</span></h2>
 
         <div style="display:flex;gap:.5rem;margin-bottom:.9rem;" role="group" aria-label="Selección de modo de proceso">
-          <button type="button" id="modeAguaBtn" onclick="setVizMode('agua')" aria-pressed="false"
-            style="flex:1;padding:.5rem .7rem;border-radius:2px 8px 2px 8px;border:1px solid var(--line);background:#fff;color:var(--muted);font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;">
+          <button type="button" id="modeAguaBtn" onclick="setVizMode('agua')" aria-pressed="true" style="flex: 1 1 0%; padding: 0.5rem 0.7rem; border-radius: 2px 8px; border: 1px solid var(--water); background: var(--water); color: rgb(255, 255, 255); font-family: &quot;IBM Plex Sans&quot;, sans-serif; font-size: 12.5px; font-weight: 600; cursor: pointer;">
             Modo clarificador de agua
           </button>
-          <button type="button" id="modeRelaveBtn" onclick="setVizMode('relave')" aria-pressed="true"
-            style="flex:1;padding:.5rem .7rem;border-radius:2px 8px 2px 8px;border:1px solid var(--water);background:var(--water);color:#fff;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;">
+          <button type="button" id="modeRelaveBtn" onclick="setVizMode('relave')" aria-pressed="false" style="flex: 1 1 0%; padding: 0.5rem 0.7rem; border-radius: 2px 8px; border: 1px solid var(--line); background: rgb(255, 255, 255); color: var(--muted); font-family: &quot;IBM Plex Sans&quot;, sans-serif; font-size: 12.5px; font-weight: 600; cursor: pointer;">
             Modo espesador de relave
           </button>
         </div>
         <div style="display:flex;gap:.5rem;margin-bottom:.9rem;">
-          <button type="button" id="sectionToggleBtn" onclick="toggleSection()" aria-pressed="false"
-            style="flex:1;padding:.5rem .7rem;border-radius:2px 8px 2px 8px;border:1px solid var(--line);background:#fff;color:var(--muted);font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;">
-            Vista en corte
-          </button>
+          <button type="button" id="sectionToggleBtn" onclick="toggleSection()" aria-pressed="true" style="flex: 1 1 0%; padding: 0.5rem 0.7rem; border-radius: 2px 8px; border: 1px solid var(--water-dark); background: var(--water-dark); color: rgb(255, 255, 255); font-family: &quot;IBM Plex Sans&quot;, sans-serif; font-size: 12.5px; font-weight: 600; cursor: pointer;">Vista en corte: ON</button>
         </div>
 
         <div class="diagram-box">
-          <div id="scene3d"
-          role="img"
-          tabindex="0"
-          aria-label="Modelo 3D rotable del sedimentador circular en modo espesador de relave. Es una visualización complementaria; los valores numéricos equivalentes están disponibles en el panel de Resultados." 
-          aria-describedby="scene3d-help"
-          style="width:100%;max-width:520px;height:340px;border-radius:8px;background:#DCE9E4;overflow:hidden;"></div>
+          <div id="scene3d" role="img" tabindex="0" aria-label="Modelo 3D rotable del sedimentador circular en modo clarificador de agua. Es una visualización complementaria; los valores numéricos equivalentes están disponibles en el panel de Resultados." aria-describedby="scene3d-help" style="width:100%;max-width:520px;height:340px;border-radius:8px;background:linear-gradient(180deg, #E7EBE9 0%, #C6CFCB 100%);overflow:hidden;"><canvas width="520" height="340" style="display: block; width: 520px; height: 340px;"></canvas></div>
         </div>
-          <p id="scene3d-help"
-          style="font-size:12px;color:var(--muted);text-align:center;margin:.5rem 0 0;">
+          <p id="scene3d-help" style="font-size:12px;color:var(--muted);text-align:center;margin:.5rem 0 0;">
           Para utilizar el modelo con teclado, selecciónelo y use las teclas de flecha para rotar y + o − para acercar o alejar.
           </p>
            
         <div style="display:flex;flex-wrap:wrap;gap:.9rem;justify-content:center;margin-top:.8rem;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);">
-          <span><span aria-hidden="true" style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#014898;margin-right:5px;vertical-align:middle;" id="legendInletDot"></span><span id="legendInlet">Entrada de alimentación</span></span>
+          <span><span aria-hidden="true" style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: rgb(1, 72, 152); margin-right: 5px; vertical-align: middle;" id="legendInletDot"></span><span id="legendInlet">Entrada de alimentación</span></span>
           <span><span aria-hidden="true" style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#2E8B57;margin-right:5px;vertical-align:middle;"></span><span id="legendOutlet">Salida de agua clarificada</span></span>
-          <span><span aria-hidden="true" style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#8B4513;margin-right:5px;vertical-align:middle;" id="legendSludgeDot"></span><span id="legendSludge">Descarga de lodos</span></span>
-          <span><span aria-hidden="true" style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#5C6F63;margin-right:5px;vertical-align:middle;" id="legendBlanketDot"></span><span id="legendBlanket">Manto de sólidos (lodo)</span></span>
+          <span><span aria-hidden="true" style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: rgb(139, 69, 19); margin-right: 5px; vertical-align: middle;" id="legendSludgeDot"></span><span id="legendSludge">Descarga de lodos</span></span>
+          <span><span aria-hidden="true" style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: rgb(110, 90, 66); margin-right: 5px; vertical-align: middle;" id="legendBlanketDot"></span><span id="legendBlanket">Manto de lodo biológico</span></span>
         </div>
       </div>
 
@@ -847,28 +1127,28 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
 
           <div class="metric">
             <div class="metric-top">
-              <span class="metric-name">Carga superficial<small>SOR</small><span id="sorStatus" class="metric-status status-ok">—</span></span>
-              <span class="metric-value" id="sorVal">—</span>
+              <span class="metric-name">Carga superficial<small>SOR</small><span id="sorStatus" class="metric-status status-ok">ok</span></span>
+              <span class="metric-value" id="sorVal">16,5 m³/m²·día</span>
             </div>
-            <div class="bar-track"><div class="bar-range" id="sorRange"></div><div class="bar-fill" id="sorFill"></div></div>
+            <div class="bar-track"><div class="bar-range" id="sorRange" style="left: 21.7391%; width: 43.4783%;"></div><div class="bar-fill" id="sorFill" style="left: 23.1113%;"></div></div>
             <div class="bar-labels"><span id="sorMinLbl">16</span><span id="sorMaxLbl">32</span></div>
           </div>
 
           <div class="metric">
             <div class="metric-top">
-              <span class="metric-name">Carga sobre vertedero<small>WLR</small><span id="wlrStatus" class="metric-status status-ok">—</span></span>
-              <span class="metric-value" id="wlrVal">—</span>
+              <span class="metric-name">Carga sobre vertedero<small>WLR</small><span id="wlrStatus" class="metric-status status-low">bajo</span></span>
+              <span class="metric-value" id="wlrVal">74,3 m³/m·día</span>
             </div>
-            <div class="bar-track"><div class="bar-range" id="wlrRange"></div><div class="bar-fill" id="wlrFill"></div></div>
+            <div class="bar-track"><div class="bar-range" id="wlrRange" style="left: 12.9032%; width: 54.8387%;"></div><div class="bar-fill" id="wlrFill" style="left: 11.0556%;"></div></div>
             <div class="bar-labels"><span id="wlrMinLbl">80</span><span id="wlrMaxLbl">250</span></div>
           </div>
 
           <div class="metric">
             <div class="metric-top">
-              <span class="metric-name">Carga de sólidos<small>SLR</small><span id="slrStatus" class="metric-status status-ok">—</span></span>
-              <span class="metric-value" id="slrVal">—</span>
+              <span class="metric-name">Carga de sólidos<small>SLR</small><span id="slrStatus" class="metric-status status-low">bajo</span></span>
+              <span class="metric-value" id="slrVal">46,2 kg/m²·día</span>
             </div>
-            <div class="bar-track"><div class="bar-range" id="slrRange"></div><div class="bar-fill" id="slrFill"></div></div>
+            <div class="bar-track"><div class="bar-range" id="slrRange" style="left: 35.2363%; width: 28.496%;"></div><div class="bar-fill" id="slrFill" style="left: 2.99298%;"></div></div>
             <div class="bar-labels"><span id="slrMinLbl">96</span><span id="slrMaxLbl">140</span></div>
           </div>
 
@@ -938,6 +1218,41 @@ let flowMarkers = [];
 let flowTime = 0;
 let vizMode = 'relave'; // 'agua' (clarificador) | 'relave' (espesador minero) — modo por defecto
 let sectionView = false; // true = vista en corte (cuña removida, como un molde de torta)
+let concreteTexture = null; // textura procedural (canvas) generada una sola vez y reutilizada
+let waterBaseY = 0; // posición base de la superficie de agua, usada para el leve oleaje animado
+const TANK_ELEVATION = 1.8; // altura sobre el piso: deja visible la tubería de descarga de lodos
+
+/* Genera una textura de hormigón/concreto con ruido procedural en un <canvas>,
+   sin depender de imágenes externas (evita fallos de carga en GitHub Pages). */
+function getConcreteTexture(){
+  if(concreteTexture) return concreteTexture;
+  const size = 256;
+  const cnv = document.createElement('canvas');
+  cnv.width = size; cnv.height = size;
+  const ctx = cnv.getContext('2d');
+  ctx.fillStyle = '#9EAFA8';
+  ctx.fillRect(0, 0, size, size);
+  const imgData = ctx.getImageData(0, 0, size, size);
+  for(let i = 0; i < imgData.data.length; i += 4){
+    const n = (Math.random() - 0.5) * 28;
+    imgData.data[i]   = Math.min(255, Math.max(0, imgData.data[i]   + n));
+    imgData.data[i+1] = Math.min(255, Math.max(0, imgData.data[i+1] + n));
+    imgData.data[i+2] = Math.min(255, Math.max(0, imgData.data[i+2] + n));
+  }
+  ctx.putImageData(imgData, 0, 0);
+  // manchas suaves adicionales (variación de humedad/desgaste)
+  for(let i = 0; i < 40; i++){
+    ctx.beginPath();
+    ctx.arc(Math.random()*size, Math.random()*size, Math.random()*10+3, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(60,70,66,${Math.random()*0.08})`;
+    ctx.fill();
+  }
+  concreteTexture = new THREE.CanvasTexture(cnv);
+  concreteTexture.wrapS = THREE.RepeatWrapping;
+  concreteTexture.wrapT = THREE.RepeatWrapping;
+  concreteTexture.repeat.set(4, 1);
+  return concreteTexture;
+}
 let currentDiameter = 0;
 
 // Ángulo de la cuña que se remueve en la vista en corte (~80°), centrado
@@ -987,7 +1302,7 @@ function applyRefRanges(mode){
   document.getElementById('refsModeTag').textContent = mode==='relave' ? '(espesador de relave)' : '(clarificador de agua)';
 }
 
-function waterColor(){ return vizMode==='relave' ? 0xA9713A : 0x2E6E8E; }
+function waterColor(){ return vizMode==='relave' ? 0xA9713A : 0x2E86C1; }
 function troughColor(){ return vizMode==='relave' ? 0xC1854A : 0x3A8DB5; }
 function waterOpacity(){ return vizMode==='relave' ? 0.95 : 0.45; }
 function inletColor(){ return vizMode==='relave' ? 0x8B5A2B : 0x014898; }
@@ -995,8 +1310,8 @@ function sludgeColor(){ return vizMode==='relave' ? 0xA0522D : 0x8B4513; }
 function outletColor(){ return 0x2E8B57; }
 
 // Manto de sólidos (lodo activado / relave sedimentado) dentro del estanque
-function blanketColor(){ return vizMode==='relave' ? 0x6B4423 : 0x5C6F63; }
-function blanketOpacity(){ return vizMode==='relave' ? 0.9 : 0.55; }
+function blanketColor(){ return vizMode==='relave' ? 0x6B4423 : 0x6E5A42; }
+function blanketOpacity(){ return vizMode==='relave' ? 0.9 : 0.68; }
 // Fracción de la altura útil (wallH) que ocupa el manto: el relave, más denso
 // y de sedimentación más lenta, forma un manto mucho más alto que el lodo
 // biológico de un clarificador secundario.
@@ -1052,16 +1367,19 @@ function initScene3D(){
 
   scene3d = new THREE.Scene();
   camera3d = new THREE.PerspectiveCamera(38, w/h, 0.1, 200);
-  camera3d.position.set(20, 16, 22);
+  camera3d.position.set(20, 16 + TANK_ELEVATION, 22);
 
   renderer3d = new THREE.WebGLRenderer({antialias:true, alpha:true});
   renderer3d.setSize(w, h);
-  renderer3d.setPixelRatio(window.devicePixelRatio);
+  renderer3d.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer3d.outputEncoding = THREE.sRGBEncoding;
+  renderer3d.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer3d.toneMappingExposure = 0.92;
   container.appendChild(renderer3d.domElement);
 
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x6b7a75, 0.95);
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x6b7a75, 0.75);
   scene3d.add(hemi);
-  const dir = new THREE.DirectionalLight(0xffffff, 0.65);
+  const dir = new THREE.DirectionalLight(0xffffff, 0.9);
   dir.position.set(12, 20, 8);
   scene3d.add(dir);
 
@@ -1074,8 +1392,10 @@ function initScene3D(){
   controls3d.maxPolarAngle = Math.PI * 0.49;
 
   tankGroup = new THREE.Group();
+  tankGroup.position.y = TANK_ELEVATION;
   scene3d.add(tankGroup);
   flowArrowsGroup = new THREE.Group();
+  flowArrowsGroup.position.y = TANK_ELEVATION;
   scene3d.add(flowArrowsGroup);
 
   const grid = new THREE.GridHelper(30, 20, 0x93A39C, 0xC2CFCB);
@@ -1194,6 +1514,13 @@ if(scraperGroup){
 }
 flowTime += 0.006;
 
+if(waterMesh){
+  // Oleaje sutil: pequeño movimiento vertical + variación de rugosidad para un brillo cambiante,
+  // sin tocar la geometría (barato en cómputo y sin riesgo de deformar el mesh).
+  waterMesh.position.y = waterBaseY + Math.sin(flowTime * 18) * 0.012;
+  waterMesh.material.roughness = 0.22 + Math.sin(flowTime * 9) * 0.05;
+}
+
 flowMarkers.forEach(m=>{
 
     // Factor global según el modo
@@ -1227,11 +1554,10 @@ function drawTank3D(D, wlrStatusCls){
 
   const wallGeo = new THREE.CylinderGeometry(r, r, wallH, 48, 1, true, th.start, th.length);
   const wallMat = new THREE.MeshStandardMaterial({
-    color: 0xC7D6D0, 
+    color: 0xB8C4BC, 
     side: THREE.DoubleSide, 
-    roughness: 0.8,
-    transparent: true,
-    opacity: 0.72
+    roughness: 0.85,
+    map: getConcreteTexture()
   });
   const wall = new THREE.Mesh(wallGeo, wallMat);
   wall.position.y = hopperH + wallH/2;
@@ -1241,6 +1567,7 @@ function drawTank3D(D, wlrStatusCls){
   const waterMat = new THREE.MeshStandardMaterial({color:waterColor(), roughness:0.25, metalness:0.05, transparent:true, opacity:waterOpacity()});
   waterMesh = new THREE.Mesh(waterGeo, waterMat);
   waterMesh.position.y = hopperH + wallH - 0.15;
+  waterBaseY = waterMesh.position.y;
   tankGroup.add(waterMesh);
 
   /*
@@ -1251,7 +1578,7 @@ function drawTank3D(D, wlrStatusCls){
   clarificador de agua es una capa delgada de lodo biológico.
   */
   const blanketH = wallH * blanketHeightFrac();
-  const blanketGeo = new THREE.CylinderGeometry(r*0.97, r*0.90, blanketH, 48, 1, true, th.start, th.length);
+  const blanketGeo = new THREE.CylinderGeometry(r*0.985, r*0.985, blanketH, 48, 1, true, th.start, th.length);
   const blanketMat = new THREE.MeshStandardMaterial({
     color: blanketColor(),
     roughness: 0.9,
@@ -1263,7 +1590,7 @@ function drawTank3D(D, wlrStatusCls){
   sludgeBlanketMesh.position.y = hopperH + blanketH/2;
   tankGroup.add(sludgeBlanketMesh);
 
-  const blanketTopGeo = new THREE.CircleGeometry(r*0.97, 48, th.start, th.length);
+  const blanketTopGeo = new THREE.CircleGeometry(r*0.985, 48, th.start, th.length);
   const blanketTop = new THREE.Mesh(blanketTopGeo, blanketMat);
   blanketTop.rotation.x = -Math.PI/2;
   blanketTop.position.y = hopperH + blanketH;
@@ -1328,7 +1655,7 @@ function drawTank3D(D, wlrStatusCls){
   [-1, 1].forEach(direction => {
     const armGeo = new THREE.BoxGeometry(armLen, 0.06*bulk, 0.07*bulk);
     const arm = new THREE.Mesh(armGeo, scraperMetalMat);
-    
+
     arm.position.set(direction * (targetR / 2), hopperH * 0.52, 0);
     arm.rotation.z = direction * slopeAngle;
     scraperGroup.add(arm);
@@ -1376,8 +1703,8 @@ function drawTank3D(D, wlrStatusCls){
     return a > th.length;
   }
 
-  const numNotches = 72;
-  const notchGeo = new THREE.ConeGeometry(0.08, 0.2, 3);
+  const numNotches = 128;
+  const notchGeo = new THREE.ConeGeometry(0.055, 0.2, 3);
   for(let i = 0; i < numNotches; i++) {
     const angle = (i / numNotches) * Math.PI * 2;
     if(angleInsideCut(angle)) continue;
@@ -1393,7 +1720,7 @@ function drawTank3D(D, wlrStatusCls){
 
   const troughWidth = 0.45;
   const troughOuterR = r + troughWidth;
-  const troughConcreteMat = new THREE.MeshStandardMaterial({color: 0x9EAFA8, roughness: 0.8, side: THREE.DoubleSide});
+  const troughConcreteMat = new THREE.MeshStandardMaterial({color: 0x9EAFA8, roughness: 0.85, side: THREE.DoubleSide, map: getConcreteTexture()});
   const troughWaterMat = new THREE.MeshStandardMaterial({color: troughColor(), roughness: 0.2, transparent: true, opacity: 0.85});
 
   const troughOuterWallGeo = new THREE.CylinderGeometry(troughOuterR, troughOuterR, 0.45, 48, 1, true, th.start, th.length);
@@ -1413,20 +1740,16 @@ function drawTank3D(D, wlrStatusCls){
   troughWater.position.y = hopperH + wallH - 0.08;
   tankGroup.add(troughWater);
 
-  const effluentPipeMat = new THREE.MeshStandardMaterial({color: 0x1B4B63, roughness: 0.4, transparent:true, opacity:0.35, depthWrite:false});
-  const effluentPipeLen = 1.6;
-  const effluentPipeGeo = new THREE.CylinderGeometry(0.12, 0.12, effluentPipeLen, 16);
+  // Cañería de salida de agua clarificada: mismo estilo que la tubería de
+  // entrada de pulpa (carcasa translúcida simple, sin "líquido" interior
+  // separado — el color de flujo lo aportan las flechas que pasan por dentro).
+  const effluentPipeMat = new THREE.MeshStandardMaterial({color:0x3E6E8A, roughness:0.4, metalness:0.15, transparent:true, opacity:0.32, depthWrite:false});
+  const effluentPipeLen = 2.0; // coincide con el recorrido de las flechas de flujo (outletPath)
+  const effluentPipeGeo = new THREE.CylinderGeometry(0.2, 0.2, effluentPipeLen, 20);
   const effluentPipe = new THREE.Mesh(effluentPipeGeo, effluentPipeMat);
   effluentPipe.rotation.z = Math.PI / 2;
   effluentPipe.position.set(-(troughOuterR + effluentPipeLen / 2), hopperH + wallH - 0.08, 0);
   tankGroup.add(effluentPipe);
-
-  const effluentLiquidMat = new THREE.MeshStandardMaterial({color: outletColor(), roughness: 0.2, metalness: 0.05, transparent:true, opacity: 0.9});
-  const effluentLiquidGeo = new THREE.CylinderGeometry(0.075, 0.075, effluentPipeLen - 0.06, 16);
-  const effluentLiquid = new THREE.Mesh(effluentLiquidGeo, effluentLiquidMat);
-  effluentLiquid.rotation.z = Math.PI / 2;
-  effluentLiquid.position.copy(effluentPipe.position);
-  tankGroup.add(effluentLiquid);
 
   const pipeMat = new THREE.MeshStandardMaterial({color:0x3E6E8A, roughness:0.4, metalness:0.15, transparent:true, opacity:0.32, depthWrite:false});
   const pipeY = hopperH + wallH + 1.5;
@@ -1462,6 +1785,25 @@ function drawTank3D(D, wlrStatusCls){
   sludgeRun.position.set(sludgeRunLen/2, sludgeElbowY, 0);
   tankGroup.add(sludgeRun);
 
+  // Columnas de soporte: elevan el estanque sobre el nivel del piso, dejando
+  // a la vista la tubería de descarga de lodos (como en una planta real).
+  // Suben hasta el anillo donde la tolva cónica se une al muro cilíndrico
+  // (radio completo r), que es el punto real donde apoyaría la estructura.
+  const columnMat = new THREE.MeshStandardMaterial({color: 0x9AA6A0, roughness: 0.75, map: getConcreteTexture()});
+  const columnR = 0.16 * bulk;
+  const columnTopY = hopperH;                    // toca el anillo base del muro
+  const columnH = TANK_ELEVATION + columnTopY;    // desde el piso hasta ese anillo
+  const columnY = columnTopY - columnH / 2;
+  [50, 130, 230, 310].forEach(deg=>{
+    const rad = deg * Math.PI / 180;
+    if(angleInsideCut(rad)) return; // se omite si queda dentro de la cuña removida
+    const cx = Math.cos(rad) * r * 0.95;
+    const cz = Math.sin(rad) * r * 0.95;
+    const column = new THREE.Mesh(new THREE.CylinderGeometry(columnR, columnR*1.15, columnH, 12), columnMat);
+    column.position.set(cx, columnY, cz);
+    tankGroup.add(column);
+  });
+
   const walkY = hopperH + wallH + 0.65;
   const walkMat = new THREE.MeshStandardMaterial({color:0x8A8176, roughness:0.85});
   const deckGeo = new THREE.BoxGeometry(0.9, 0.12, r*2 + 1.2);
@@ -1482,7 +1824,7 @@ function drawTank3D(D, wlrStatusCls){
     tankGroup.add(leg);
   });
 
-  controls3d.target.set(0, hopperH + wallH/2, 0);
+  controls3d.target.set(0, TANK_ELEVATION + hopperH + wallH/2, 0);
 drawFlowArrows(D);
 }
 function makeFlowMarker(color){
@@ -2087,5 +2429,6 @@ setVizMode('relave');
 
   </div>
 </details>
-</body>
-</html>
+
+
+</body></html>
