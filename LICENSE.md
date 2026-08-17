@@ -1,6 +1,6 @@
 Laboratorio Virtual de Sedimentadores Circulares
 Copyright (c) 2025-2026 Matías Troncoso Araya, Universidad del Bío-Bío
-
+ 
 Esta obra está bajo una Licencia Creative Commons
 Atribución-CompartirIgual 4.0 Internacional (CC BY-SA 4.0).
 
