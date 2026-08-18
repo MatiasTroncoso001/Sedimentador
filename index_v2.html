@@ -1455,11 +1455,9 @@ if(sectionView){
   - Anillo de fondo en el ápice (borde de descarga de lodos a cota y=0).
   - Tapas laterales en vista en corte (sectionView) que cierran la sección cónica maciza.
   */
-  function hopperBottomFrac(){ return vizMode==='relave' ? 0.05 : 0.14; }
-  const hopperThick = wallThick; // 0.18 m de espesor estructural
+    const hopperThick = wallThick; // 0.18 m de espesor estructural
   const hopperRTopExt = rExt;
   const hopperRTopInt = rInt;
-  const hopperRBotInt = Math.max(0.18, rInt * hopperBottomFrac());
   const hopperRBotExt = hopperRBotInt + hopperThick;
 
   const hopperConcreteTex = concreteTexture(Math.max(4, Math.round(rExt * 2 * Math.PI / 3)), Math.max(1, Math.round(hopperH / 1.6)));
