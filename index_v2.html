@@ -1555,17 +1555,15 @@ for(let i = 0; i <= numNotches; i++) {
   troughOuterWall.position.y = hopperH + wallH + 0.025;
   tankGroup.add(troughOuterWall);
 
-  const troughFloorGeo = new THREE.RingGeometry(r, troughOuterR, 48, 1, th.start, th.length);
-  const troughFloor = new THREE.Mesh(troughFloorGeo, troughConcreteMat);
-  troughFloor.rotation.x = Math.PI / 2;
-  troughFloor.position.y = hopperH + wallH - 0.2;
-  tankGroup.add(troughFloor);
+const troughFloorGeo = new THREE.CylinderGeometry(troughOuterR, r, 0.02, 48, 1, true, th.start, th.length);
+const troughFloor = new THREE.Mesh(troughFloorGeo, troughConcreteMat);
+troughFloor.position.y = hopperH + wallH - 0.2;
+tankGroup.add(troughFloor);
 
-  const troughWaterGeo = new THREE.RingGeometry(r * 1.002, troughOuterR * 0.98, 48, 1, th.start, th.length);
-  const troughWater = new THREE.Mesh(troughWaterGeo, troughWaterMat);
-  troughWater.rotation.x = Math.PI / 2;
-  troughWater.position.y = hopperH + wallH - 0.08;
-  tankGroup.add(troughWater);
+const troughWaterGeo = new THREE.CylinderGeometry(troughOuterR * 0.98, r * 1.002, 0.02, 48, 1, true, th.start, th.length);
+const troughWater = new THREE.Mesh(troughWaterGeo, troughWaterMat);
+troughWater.position.y = hopperH + wallH - 0.08;
+tankGroup.add(troughWater);
 
   /*
   Tubería de salida (efluente): usa exactamente el mismo material y radio
