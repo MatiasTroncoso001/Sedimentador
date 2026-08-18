@@ -1365,7 +1365,7 @@ if(sectionView){
   const blanketTopY = hopperH + blanketH;
   const clarifiedWaterH = Math.max(0.05, waterSurfaceY - blanketTopY);
 
-  // 1. MATERIAL Y VOLUMEN DE AGUA CLARIFICADA
+ // 1. MATERIAL Y VOLUMEN DE AGUA CLARIFICADA
   const waterMat = new THREE.MeshStandardMaterial({
     color: waterColor(),
     roughness: 0.2,
@@ -1375,8 +1375,8 @@ if(sectionView){
     side: THREE.DoubleSide
   });
 
-  // Tapa superior (superficie libre) del agua
-  const waterGeo = new THREE.CylinderGeometry(rInt*0.99, rInt*0.99, 0.02, 48, 1, false, th.start, th.length);
+  // Tapa superior (superficie libre) del agua ajustada al radio interior exacto
+  const waterGeo = new THREE.CylinderGeometry(rInt*0.999, rInt*0.999, 0.02, 48, 1, false, th.start, th.length);
   waterMesh = new THREE.Mesh(waterGeo, waterMat);
   waterMesh.position.y = waterSurfaceY;
   tankGroup.add(waterMesh);
@@ -1385,9 +1385,9 @@ if(sectionView){
   if(sectionView){
     const angles = [th.start, th.start + th.length];
     angles.forEach(angle => {
-      const waterCutGeo = new THREE.PlaneGeometry(rInt * 0.985, clarifiedWaterH);
+      const waterCutGeo = new THREE.PlaneGeometry(rInt, clarifiedWaterH);
       const waterCut = new THREE.Mesh(waterCutGeo, waterMat);
-      const midR = (rInt * 0.985) / 2;
+      const midR = rInt / 2;
       waterCut.position.set(
         Math.sin(angle) * midR,
         blanketTopY + clarifiedWaterH / 2,
@@ -1408,8 +1408,8 @@ if(sectionView){
     side: THREE.DoubleSide
   });
 
-  // Tapa superior del manto (interfase de separación)
-  const blanketTopGeo = new THREE.CylinderGeometry(rInt*0.985, rInt*0.985, 0.02, 48, 1, false, th.start, th.length);
+  // Tapa superior del manto (interfase de separación ajustada a rInt)
+  const blanketTopGeo = new THREE.CylinderGeometry(rInt*0.999, rInt*0.999, 0.02, 48, 1, false, th.start, th.length);
   const blanketTop = new THREE.Mesh(blanketTopGeo, blanketMat);
   blanketTop.position.y = blanketTopY;
   tankGroup.add(blanketTop);
@@ -1421,10 +1421,10 @@ if(sectionView){
   if(sectionView){
     const angles = [th.start, th.start + th.length];
     angles.forEach(angle => {
-      // Corte vertical en manto
-      const blanketCutGeo = new THREE.PlaneGeometry(rInt * 0.98, blanketH);
+      // Corte vertical en manto perfectamente ajustado al muro interior
+      const blanketCutGeo = new THREE.PlaneGeometry(rInt, blanketH);
       const blanketCut = new THREE.Mesh(blanketCutGeo, blanketMat);
-      const midR = (rInt * 0.98) / 2;
+      const midR = rInt / 2;
       blanketCut.position.set(
         Math.sin(angle) * midR,
         hopperH + blanketH / 2,
@@ -1433,13 +1433,13 @@ if(sectionView){
       blanketCut.rotation.y = angle + Math.PI / 2;
       tankGroup.add(blanketCut);
 
-      // Corte en cono de la tolva
+      // Corte en cono de la tolva ajustado al borde de hormigón
       const s = Math.sin(angle);
       const c = Math.cos(angle);
-      const v0 = new THREE.Vector3(s * (rInt * 0.975), hopperH, c * (rInt * 0.975));
+      const v0 = new THREE.Vector3(s * rInt, hopperH, c * rInt);
       const v1 = new THREE.Vector3(0, hopperH, 0);
       const v2 = new THREE.Vector3(0, 0, 0);
-      const v3 = new THREE.Vector3(s * (hopperRBotInt * 1.02), 0, c * (hopperRBotInt * 1.02));
+      const v3 = new THREE.Vector3(s * hopperRBotInt, 0, c * hopperRBotInt);
 
       const sludgeHopperCutGeo = new THREE.BufferGeometry().setFromPoints([v0, v1, v2, v0, v2, v3]);
       sludgeHopperCutGeo.computeVertexNormals();
