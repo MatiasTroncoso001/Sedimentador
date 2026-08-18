@@ -957,7 +957,7 @@ function getConcreteBaseTexture(){
   const ctx = canvas.getContext('2d');
 
   // Tono base de hormigón
-  ctx.fillStyle = '#B7B5AC';
+  ctx.fillStyle = '#94928A';
   ctx.fillRect(0, 0, size, size);
 
   // Grano fino (ruido) típico del hormigón
@@ -976,7 +976,7 @@ function getConcreteBaseTexture(){
     const x = Math.random() * size, y = Math.random() * size;
     const rad = 18 + Math.random() * 55;
     const grad = ctx.createRadialGradient(x, y, 0, x, y, rad);
-    const shade = Math.random() < 0.5 ? 'rgba(80,78,72,0.12)' : 'rgba(235,233,225,0.12)';
+    const shade = Math.random() < 0.5 ? 'rgba(55,53,48,0.14)' : 'rgba(175,173,165,0.08)';
     grad.addColorStop(0, shade);
     grad.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = grad;
@@ -986,7 +986,7 @@ function getConcreteBaseTexture(){
   }
 
   // Juntas de encofrado (paneles típicos del hormigón vaciado in situ)
-  ctx.strokeStyle = 'rgba(65,63,58,0.35)';
+  ctx.strokeStyle = 'rgba(50,48,43,0.30)';
   ctx.lineWidth = 2;
   for(let px2 = size/4; px2 < size; px2 += size/4){
     ctx.beginPath(); ctx.moveTo(px2, 0); ctx.lineTo(px2, size); ctx.stroke();
@@ -1133,9 +1133,10 @@ function initScene3D(){
   renderer3d.setPixelRatio(window.devicePixelRatio);
   container.appendChild(renderer3d.domElement);
 
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x6b7a75, 0.95);
+  // (Luces más suaves y cálidas para eliminar el brillo quemado):
+  const hemi = new THREE.HemisphereLight(0xf4f6f5, 0x5a6863, 0.85);
   scene3d.add(hemi);
-  const dir = new THREE.DirectionalLight(0xffffff, 0.65);
+  const dir = new THREE.DirectionalLight(0xfffdfa, 0.55);
   dir.position.set(12, 20, 8);
   scene3d.add(dir);
 
@@ -1395,17 +1396,64 @@ const blanketGeo = new THREE.CylinderGeometry(rInt*0.98, rInt*0.98, blanketH, 48
   const blanketTop = new THREE.Mesh(blanketTopGeo, blanketMat);
   blanketTop.position.y = hopperH + blanketH;
   tankGroup.add(blanketTop);
-
-  // Pendiente de la tolva: en el espesador de relave la tolva es más
-  // cónica/pronunciada (abertura inferior más angosta) para que la pasta
-  // espesada fluya hacia el centro; en el clarificador de agua la pendiente
-  // es más suave, típica de sedimentación de lodos biológicos.
+/*
+  TOLVA CÓNICA INFERIOR (con espesor estructural de hormigón):
+  - Cara exterior cónica (conecta con el muro exterior a cota y=hopperH).
+  - Cara interior cónica (conecta con el muro interior a cota y=hopperH).
+  - Anillo de fondo en el ápice (borde de descarga de lodos a cota y=0).
+  - Tapas laterales en vista en corte (sectionView) que cierran la sección cónica maciza.
+  */
   function hopperBottomFrac(){ return vizMode==='relave' ? 0.05 : 0.14; }
-  const hopperGeo = new THREE.CylinderGeometry(rInt, rInt*hopperBottomFrac(), hopperH, 48, 1, true, th.start, th.length);
-  const hopperMat = new THREE.MeshStandardMaterial({color:0x3F5751, side:THREE.DoubleSide, roughness:0.95});
-  const hopper = new THREE.Mesh(hopperGeo, hopperMat);
-  hopper.position.y = hopperH/2;
-  tankGroup.add(hopper);
+  const hopperThick = wallThick; // 0.18 m de espesor estructural
+  const hopperRTopExt = rExt;
+  const hopperRTopInt = rInt;
+  const hopperRBotInt = Math.max(0.18, rInt * hopperBottomFrac());
+  const hopperRBotExt = hopperRBotInt + hopperThick;
+
+  const hopperConcreteTex = concreteTexture(Math.max(4, Math.round(rExt * 2 * Math.PI / 3)), Math.max(1, Math.round(hopperH / 1.6)));
+  const hopperMat = new THREE.MeshStandardMaterial({
+    map: hopperConcreteTex,
+    color: 0xffffff,
+    side: THREE.DoubleSide,
+    roughness: 0.95,
+    metalness: 0.02
+  });
+
+  // A) Cara exterior de la tolva cónica
+  const hopperExtGeo = new THREE.CylinderGeometry(hopperRTopExt, hopperRBotExt, hopperH, 48, 1, true, th.start, th.length);
+  const hopperExt = new THREE.Mesh(hopperExtGeo, hopperMat);
+  hopperExt.position.y = hopperH / 2;
+  tankGroup.add(hopperExt);
+
+  // B) Cara interior de la tolva cónica
+  const hopperIntGeo = new THREE.CylinderGeometry(hopperRTopInt, hopperRBotInt, hopperH, 48, 1, true, th.start, th.length);
+  const hopperInt = new THREE.Mesh(hopperIntGeo, hopperMat);
+  hopperInt.position.y = hopperH / 2;
+  tankGroup.add(hopperInt);
+
+  // C) Anillo inferior del ápice (borde de descarga de lodos)
+  const hopperBottomRingGeo = new THREE.CylinderGeometry(hopperRBotExt, hopperRBotInt, 0.02, 48, 1, true, th.start, th.length);
+  const hopperBottomRing = new THREE.Mesh(hopperBottomRingGeo, hopperMat);
+  hopperBottomRing.position.y = 0.01;
+  tankGroup.add(hopperBottomRing);
+
+  // D) Tapas laterales para vista en corte (sección cónica maciza)
+  if(sectionView){
+    const angles = [th.start, th.start + th.length];
+    angles.forEach(angle => {
+      const s = Math.sin(angle);
+      const c = Math.cos(angle);
+      const v0 = new THREE.Vector3(s * hopperRTopExt, hopperH, c * hopperRTopExt);
+      const v1 = new THREE.Vector3(s * hopperRTopInt, hopperH, c * hopperRTopInt);
+      const v2 = new THREE.Vector3(s * hopperRBotInt, 0, c * hopperRBotInt);
+      const v3 = new THREE.Vector3(s * hopperRBotExt, 0, c * hopperRBotExt);
+
+      const cutGeo = new THREE.BufferGeometry().setFromPoints([v0, v1, v2, v0, v2, v3]);
+      cutGeo.computeVertexNormals();
+      const cutMesh = new THREE.Mesh(cutGeo, hopperMat);
+      tankGroup.add(cutMesh);
+    });
+  }
 
   /*
   ESTRUCTURA DE SOPORTE (columnas de hormigón)
