@@ -1305,20 +1305,57 @@ function drawTank3D(D, wlrStatusCls){
   // nivel del suelo.
   tankGroup.position.y = TANK_STAND_H;
 
-  const wallGeo = new THREE.CylinderGeometry(r, r, wallH, 48, 1, true, th.start, th.length);
-  const wallConcreteTex = concreteTexture(Math.max(4, Math.round(r*2*Math.PI/3)), Math.max(1, Math.round(wallH/1.6)));
-  const wallMat = new THREE.MeshStandardMaterial({
-    map: wallConcreteTex,
-    color: 0xffffff,
-    side: THREE.DoubleSide,
-    roughness: 0.95,
-    metalness: 0.02
-  });
-  const wall = new THREE.Mesh(wallGeo, wallMat);
-  wall.position.y = hopperH + wallH/2;
-  tankGroup.add(wall);
+// CÓDIGO CON ESPESOR DE PARED:
+const wallThick = 0.18; // Espesor del muro de hormigón
+const rExt = r;
+const rInt = r - wallThick;
 
-  const waterGeo = new THREE.CylinderGeometry(r*0.985, r*0.985, 0.06, 48, 1, false, th.start, th.length);
+const wallConcreteTex = concreteTexture(Math.max(4, Math.round(r*2*Math.PI/3)), Math.max(1, Math.round(wallH/1.6)));
+const wallMat = new THREE.MeshStandardMaterial({
+  map: wallConcreteTex,
+  color: 0xffffff,
+  side: THREE.DoubleSide,
+  roughness: 0.95,
+  metalness: 0.02
+});
+
+// A) Pared exterior
+const wallExtGeo = new THREE.CylinderGeometry(rExt, rExt, wallH, 48, 1, true, th.start, th.length);
+const wallExt = new THREE.Mesh(wallExtGeo, wallMat);
+wallExt.position.y = hopperH + wallH/2;
+tankGroup.add(wallExt);
+
+// B) Pared interior
+const wallIntGeo = new THREE.CylinderGeometry(rInt, rInt, wallH, 48, 1, true, th.start, th.length);
+const wallInt = new THREE.Mesh(wallIntGeo, wallMat);
+wallInt.position.y = hopperH + wallH/2;
+tankGroup.add(wallInt);
+
+// C) Borde superior (coronamiento del muro)
+const wallTopGeo = new THREE.CylinderGeometry(rExt, rInt, 0.02, 48, 1, true, th.start, th.length);
+const wallTop = new THREE.Mesh(wallTopGeo, wallMat);
+wallTop.position.y = hopperH + wallH;
+tankGroup.add(wallTop);
+
+     // Tapas laterales en los extremos de la sección en corte
+if(sectionView){
+  const angles = [th.start, th.start + th.length];
+  angles.forEach(angle => {
+    const cutFaceGeo = new THREE.PlaneGeometry(wallThick, wallH);
+    const cutFace = new THREE.Mesh(cutFaceGeo, wallMat);
+    const midR = (rExt + rInt) / 2;
+    cutFace.position.set(
+      Math.sin(angle) * midR,
+      hopperH + wallH / 2,
+      Math.cos(angle) * midR
+    );
+    cutFace.rotation.y = angle + Math.PI / 2;
+    tankGroup.add(cutFace);
+  });
+}
+  
+
+const waterGeo = new THREE.CylinderGeometry(rInt*0.99, rInt*0.99, 0.06, 48, 1, false, th.start, th.length);
   const waterMat = new THREE.MeshStandardMaterial({color:waterColor(), roughness:0.25, metalness:0.05, transparent:true, opacity:waterOpacity()});
   waterMesh = new THREE.Mesh(waterGeo, waterMat);
   waterMesh.position.y = hopperH + wallH - 0.15;
@@ -1332,7 +1369,7 @@ function drawTank3D(D, wlrStatusCls){
   clarificador de agua es una capa delgada de lodo biológico.
   */
   const blanketH = wallH * blanketHeightFrac();
-  const blanketGeo = new THREE.CylinderGeometry(r*0.97, r*0.97, blanketH, 48, 1, true, th.start, th.length);
+const blanketGeo = new THREE.CylinderGeometry(rInt*0.98, rInt*0.98, blanketH, 48, 1, true, th.start, th.length);
   const blanketMat = new THREE.MeshStandardMaterial({
     color: blanketColor(),
     roughness: 0.9,
@@ -1354,7 +1391,7 @@ function drawTank3D(D, wlrStatusCls){
   resto del estanque. Con CylinderGeometry el ángulo queda parametrizado
   exactamente igual que en las demás piezas, por lo que el corte coincide.
   */
-  const blanketTopGeo = new THREE.CylinderGeometry(r*0.97, r*0.97, 0.02, 48, 1, false, th.start, th.length);
+  const blanketTopGeo = new THREE.CylinderGeometry(rInt*0.98, rInt*0.98, 0.02, 48, 1, false, th.start, th.length);
   const blanketTop = new THREE.Mesh(blanketTopGeo, blanketMat);
   blanketTop.position.y = hopperH + blanketH;
   tankGroup.add(blanketTop);
@@ -1364,7 +1401,7 @@ function drawTank3D(D, wlrStatusCls){
   // espesada fluya hacia el centro; en el clarificador de agua la pendiente
   // es más suave, típica de sedimentación de lodos biológicos.
   function hopperBottomFrac(){ return vizMode==='relave' ? 0.05 : 0.14; }
-  const hopperGeo = new THREE.CylinderGeometry(r, r*hopperBottomFrac(), hopperH, 48, 1, true, th.start, th.length);
+  const hopperGeo = new THREE.CylinderGeometry(rInt, rInt*hopperBottomFrac(), hopperH, 48, 1, true, th.start, th.length);
   const hopperMat = new THREE.MeshStandardMaterial({color:0x3F5751, side:THREE.DoubleSide, roughness:0.95});
   const hopper = new THREE.Mesh(hopperGeo, hopperMat);
   hopper.position.y = hopperH/2;
