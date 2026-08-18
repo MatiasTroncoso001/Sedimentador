@@ -1332,7 +1332,7 @@ function drawTank3D(D, wlrStatusCls){
   clarificador de agua es una capa delgada de lodo biológico.
   */
   const blanketH = wallH * blanketHeightFrac();
-  const blanketGeo = new THREE.CylinderGeometry(r*0.97, r*0.90, blanketH, 48, 1, true, th.start, th.length);
+  const blanketGeo = new THREE.CylinderGeometry(r*0.97, r*0.97, blanketH, 48, 1, true, th.start, th.length);
   const blanketMat = new THREE.MeshStandardMaterial({
     color: blanketColor(),
     roughness: 0.9,
@@ -1385,7 +1385,7 @@ function drawTank3D(D, wlrStatusCls){
   const colTopY = hopperH;            // arranque del muro / borde superior de la tolva
   const colHeight = colTopY - colBottomY;
   const nCols = 6;
-  const colRing = r * 0.88;
+  const colRing = r;
 
   const colGeo = new THREE.CylinderGeometry(0.16, 0.20, colHeight, 14);
   const colConcreteTex = concreteTexture(1, Math.max(1, Math.round(colHeight/1.4)));
@@ -1414,9 +1414,9 @@ function drawTank3D(D, wlrStatusCls){
   // dentro del sedimentador y se veía en la vista en corte. Al ubicarla
   // abajo, junto a las zapatas, queda siempre por fuera y por debajo del
   // sedimentador.)
-  const ringBeam = new THREE.Mesh(new THREE.TorusGeometry(colRing, 0.12, 10, 48), supportMat);
+  const ringBeam = new THREE.Mesh(new THREE.TorusGeometry(r, 0.14, 12, 48), supportMat);
   ringBeam.rotation.x = Math.PI/2;
-  ringBeam.position.y = colBottomY + 0.18;
+  ringBeam.position.y = hopperH;
   supportGroup.add(ringBeam);
 
   // Arriostramiento horizontal a media altura entre columnas consecutivas
@@ -1725,7 +1725,7 @@ addFlowLine(inletPath, inletColor(), inletSpeed, 5);
     new THREE.Vector3(-(troughOuterR), troughY, 0),
     new THREE.Vector3(-(troughOuterR + 2.0), troughY, 0)
   ];
- addFlowLine(outletPath, outletColor(), outletSpeed, 5);
+ addFlowLine(outletPath, outletColor(), outletSpeed, 2);
 
 
   /*
@@ -1739,7 +1739,7 @@ addFlowLine(inletPath, inletColor(), inletSpeed, 5);
     new THREE.Vector3(0, y0 - 1.15, 0),
     new THREE.Vector3(2.3, y0 - 1.15, 0)
   ];
-addFlowLine(sludgePath, sludgeColor(), sludgeSpeed, 5);
+addFlowLine(sludgePath, sludgeColor(), sludgeSpeed, 4);
 
 }
 function drawPlan(D, wlrStatusCls){
