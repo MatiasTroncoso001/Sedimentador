@@ -1061,19 +1061,17 @@ function applyRefRanges(mode){
   document.getElementById('refsModeTag').textContent = mode==='relave' ? '(espesador de relave)' : '(clarificador de agua)';
 }
 
+// Color 1: Agua clarificada (Azul en agua / Ámbar en relave)
 function waterColor(){ return vizMode==='relave' ? 0xA9713A : 0x2E6E8E; }
-function troughColor(){ return vizMode==='relave' ? 0xC1854A : 0x3A8DB5; }
-function waterOpacity(){ return vizMode==='relave' ? 0.95 : 0.45; }
+function troughColor(){ return waterColor(); }
+function waterOpacity(){ return vizMode==='relave' ? 0.85 : 0.45; }
 function inletColor(){ return vizMode==='relave' ? 0x8B5A2B : 0x014898; }
 function sludgeColor(){ return vizMode==='relave' ? 0xA0522D : 0x8B4513; }
 function outletColor(){ return 0x2E8B57; }
 
-// Manto de sólidos (lodo activado / relave sedimentado) dentro del estanque
+// Color 2: Manto de lodos (Gris verdoso en agua / Café oscuro en relave)
 function blanketColor(){ return vizMode==='relave' ? 0x6B4423 : 0x5C6F63; }
 function blanketOpacity(){ return vizMode==='relave' ? 0.9 : 0.55; }
-// Fracción de la altura útil (wallH) que ocupa el manto: el relave, más denso
-// y de sedimentación más lenta, forma un manto mucho más alto que el lodo
-// biológico de un clarificador secundario.
 function blanketHeightFrac(){ return vizMode==='relave' ? 0.62 : 0.30; }
 
 function setVizMode(mode){
@@ -1354,48 +1352,102 @@ if(sectionView){
     tankGroup.add(cutFace);
   });
 }
-  
 
-const waterGeo = new THREE.CylinderGeometry(rInt*0.99, rInt*0.99, 0.06, 48, 1, false, th.start, th.length);
-  const waterMat = new THREE.MeshStandardMaterial({color:waterColor(), roughness:0.25, metalness:0.05, transparent:true, opacity:waterOpacity()});
+
+ /*
+  ZONA DE AGUA CLARIFICADA Y MANTO DE LODO:
+  - Exactamente 2 fluidos/estratos visuales:
+    1. Capa superior de Agua Clarificada (color waterColor)
+    2. Capa inferior de Manto de Lodos (color blanketColor)
+  */
+  const waterSurfaceY = hopperH + wallH - 0.15;
+  const blanketH = wallH * blanketHeightFrac();
+  const blanketTopY = hopperH + blanketH;
+  const clarifiedWaterH = Math.max(0.05, waterSurfaceY - blanketTopY);
+
+  // 1. MATERIAL Y VOLUMEN DE AGUA CLARIFICADA
+  const waterMat = new THREE.MeshStandardMaterial({
+    color: waterColor(),
+    roughness: 0.2,
+    metalness: 0.05,
+    transparent: true,
+    opacity: waterOpacity(),
+    side: THREE.DoubleSide
+  });
+
+  // Tapa superior (superficie libre) del agua
+  const waterGeo = new THREE.CylinderGeometry(rInt*0.99, rInt*0.99, 0.02, 48, 1, false, th.start, th.length);
   waterMesh = new THREE.Mesh(waterGeo, waterMat);
-  waterMesh.position.y = hopperH + wallH - 0.15;
+  waterMesh.position.y = waterSurfaceY;
   tankGroup.add(waterMesh);
 
-  /*
-  MANTO DE SÓLIDOS: capa de lodo/relave sedimentado que se acumula sobre la
-  tolva, por debajo de la lámina de agua clarificada. Su altura y opacidad
-  varían según el modo: en el espesador de relave el manto es alto y denso
-  (baja velocidad de sedimentación, alta concentración de sólidos); en el
-  clarificador de agua es una capa delgada de lodo biológico.
-  */
-  const blanketH = wallH * blanketHeightFrac();
-const blanketGeo = new THREE.CylinderGeometry(rInt*0.98, rInt*0.98, blanketH, 48, 1, true, th.start, th.length);
+  // Caras de corte de agua clarificada en vista en corte
+  if(sectionView){
+    const angles = [th.start, th.start + th.length];
+    angles.forEach(angle => {
+      const waterCutGeo = new THREE.PlaneGeometry(rInt * 0.985, clarifiedWaterH);
+      const waterCut = new THREE.Mesh(waterCutGeo, waterMat);
+      const midR = (rInt * 0.985) / 2;
+      waterCut.position.set(
+        Math.sin(angle) * midR,
+        blanketTopY + clarifiedWaterH / 2,
+        Math.cos(angle) * midR
+      );
+      waterCut.rotation.y = angle + Math.PI / 2;
+      tankGroup.add(waterCut);
+    });
+  }
+
+  // 2. MATERIAL Y VOLUMEN DEL MANTO DE LODOS
   const blanketMat = new THREE.MeshStandardMaterial({
     color: blanketColor(),
-    roughness: 0.9,
+    roughness: 0.92,
+    metalness: 0.02,
     transparent: true,
     opacity: blanketOpacity(),
     side: THREE.DoubleSide
   });
-  sludgeBlanketMesh = new THREE.Mesh(blanketGeo, blanketMat);
-  sludgeBlanketMesh.position.y = hopperH + blanketH/2;
-  tankGroup.add(sludgeBlanketMesh);
 
-  /*
-  Tapa superior del manto: se usa un CylinderGeometry de altura mínima (igual
-  criterio que waterGeo) en lugar de un CircleGeometry rotado. CircleGeometry
-  parametriza su ángulo en el plano local XY y, al rotarlo para dejarlo
-  horizontal, su cuña quedaba desfasada 90° respecto del resto de las piezas
-  (muro, agua, tolva, vertedero), que usan CylinderGeometry: en vista en
-  corte esto hacía que la cuña removida del manto no coincidiera con la del
-  resto del estanque. Con CylinderGeometry el ángulo queda parametrizado
-  exactamente igual que en las demás piezas, por lo que el corte coincide.
-  */
-  const blanketTopGeo = new THREE.CylinderGeometry(rInt*0.98, rInt*0.98, 0.02, 48, 1, false, th.start, th.length);
+  // Tapa superior del manto (interfase de separación)
+  const blanketTopGeo = new THREE.CylinderGeometry(rInt*0.985, rInt*0.985, 0.02, 48, 1, false, th.start, th.length);
   const blanketTop = new THREE.Mesh(blanketTopGeo, blanketMat);
-  blanketTop.position.y = hopperH + blanketH;
+  blanketTop.position.y = blanketTopY;
   tankGroup.add(blanketTop);
+
+  // Caras de corte del manto de lodos en sectionView (zona cilíndrica vertical + tolva cónica)
+  function hopperBottomFrac(){ return vizMode==='relave' ? 0.05 : 0.14; }
+  const hopperRBotInt = Math.max(0.18, rInt * hopperBottomFrac());
+
+  if(sectionView){
+    const angles = [th.start, th.start + th.length];
+    angles.forEach(angle => {
+      // Corte vertical en manto
+      const blanketCutGeo = new THREE.PlaneGeometry(rInt * 0.98, blanketH);
+      const blanketCut = new THREE.Mesh(blanketCutGeo, blanketMat);
+      const midR = (rInt * 0.98) / 2;
+      blanketCut.position.set(
+        Math.sin(angle) * midR,
+        hopperH + blanketH / 2,
+        Math.cos(angle) * midR
+      );
+      blanketCut.rotation.y = angle + Math.PI / 2;
+      tankGroup.add(blanketCut);
+
+      // Corte en cono de la tolva
+      const s = Math.sin(angle);
+      const c = Math.cos(angle);
+      const v0 = new THREE.Vector3(s * (rInt * 0.975), hopperH, c * (rInt * 0.975));
+      const v1 = new THREE.Vector3(0, hopperH, 0);
+      const v2 = new THREE.Vector3(0, 0, 0);
+      const v3 = new THREE.Vector3(s * (hopperRBotInt * 1.02), 0, c * (hopperRBotInt * 1.02));
+
+      const sludgeHopperCutGeo = new THREE.BufferGeometry().setFromPoints([v0, v1, v2, v0, v2, v3]);
+      sludgeHopperCutGeo.computeVertexNormals();
+      const sludgeHopperCut = new THREE.Mesh(sludgeHopperCutGeo, blanketMat);
+      tankGroup.add(sludgeHopperCut);
+    });
+  }
+     
 /*
   TOLVA CÓNICA INFERIOR (con espesor estructural de hormigón):
   - Cara exterior cónica (conecta con el muro exterior a cota y=hopperH).
