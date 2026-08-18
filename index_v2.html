@@ -936,6 +936,8 @@ let currentWlrStatusCls = 'status-ok';
 let flowArrowsGroup;
 let flowMarkers = [];
 let flowTime = 0;
+let settlingParticles = null;
+let weirCascadesGroup = null;
 let vizMode = 'relave'; // 'agua' (clarificador) | 'relave' (espesador minero) — modo por defecto
 let sectionView = false; // true = vista en corte (cuña removida, como un molde de torta)
 let currentDiameter = 0;
@@ -956,7 +958,7 @@ function getConcreteBaseTexture(){
   canvas.width = size; canvas.height = size;
   const ctx = canvas.getContext('2d');
 
-  // Tono base de hormigón
+  // Tono base de hormigón (mate y menos reflectivo)
   ctx.fillStyle = '#94928A';
   ctx.fillRect(0, 0, size, size);
 
@@ -964,7 +966,7 @@ function getConcreteBaseTexture(){
   const imgData = ctx.getImageData(0, 0, size, size);
   const px = imgData.data;
   for(let i = 0; i < px.length; i += 4){
-    const n = (Math.random() - 0.5) * 30;
+    const n = (Math.random() - 0.5) * 24;
     px[i]   = Math.min(255, Math.max(0, px[i]   + n));
     px[i+1] = Math.min(255, Math.max(0, px[i+1] + n));
     px[i+2] = Math.min(255, Math.max(0, px[i+2] + n));
@@ -1061,7 +1063,6 @@ function applyRefRanges(mode){
   document.getElementById('refsModeTag').textContent = mode==='relave' ? '(espesador de relave)' : '(clarificador de agua)';
 }
 
-// Color 1: Agua clarificada (Azul en agua / Ámbar en relave)
 function waterColor(){ return vizMode==='relave' ? 0xA9713A : 0x2E6E8E; }
 function troughColor(){ return waterColor(); }
 function waterOpacity(){ return vizMode==='relave' ? 0.85 : 0.45; }
@@ -1069,9 +1070,19 @@ function inletColor(){ return vizMode==='relave' ? 0x8B5A2B : 0x014898; }
 function sludgeColor(){ return vizMode==='relave' ? 0xA0522D : 0x8B4513; }
 function outletColor(){ return 0x2E8B57; }
 
-// Color 2: Manto de lodos (Gris verdoso en agua / Café oscuro en relave)
+function settlingParticleColor(){
+  // Tono con máximo brillo y contraste para destacar intensamente
+  // Modo relave: Amarillo dorado brillante fluorescente (#FFD000) que resalta sobre el agua ámbar oscuro y el manto café
+  // Modo agua: Verde menta luminoso (#52F5A6) sobre el agua azul
+  return vizMode==='relave' ? 0xFFD000 : 0x52F5A6;
+}
+
+// Manto de sólidos (lodo activado / relave sedimentado) dentro del estanque
 function blanketColor(){ return vizMode==='relave' ? 0x6B4423 : 0x5C6F63; }
 function blanketOpacity(){ return vizMode==='relave' ? 0.9 : 0.55; }
+// Fracción de la altura útil (wallH) que ocupa el manto: el relave, más denso
+// y de sedimentación más lenta, forma un manto mucho más alto que el lodo
+// biológico de un clarificador secundario.
 function blanketHeightFrac(){ return vizMode==='relave' ? 0.62 : 0.30; }
 
 function setVizMode(mode){
@@ -1131,7 +1142,6 @@ function initScene3D(){
   renderer3d.setPixelRatio(window.devicePixelRatio);
   container.appendChild(renderer3d.domElement);
 
-  // (Luces más suaves y cálidas para eliminar el brillo quemado):
   const hemi = new THREE.HemisphereLight(0xf4f6f5, 0x5a6863, 0.85);
   scene3d.add(hemi);
   const dir = new THREE.DirectionalLight(0xfffdfa, 0.55);
@@ -1254,24 +1264,76 @@ function pointAlongPath(points, t){
 function animate3D(){
   requestAnimationFrame(animate3D);
 
-if(scraperGroup){
-
-    // Velocidad de giro según el modo de operación
-    const scraperSpeed =
-        (vizMode === 'agua')
-            ? 0.008      // Clarificador
-            : 0.0022;    // Espesador
-
+  const scraperSpeed = (vizMode === 'agua') ? 0.008 : 0.0022;
+  if(scraperGroup){
+    // Giro del barredor en sentido positivo (+Y)
     scraperGroup.rotation.y += scraperSpeed;
+  }
+  flowTime += 0.006;
 
-}
-flowTime += 0.006;
+  // Actualización de partículas de sedimentación
+  // Giran en la MISMA DIRECCIÓN (+Y) del barredor mientras van descendiendo
+  if(settlingParticles && settlingParticles.geometry.attributes.position){
+    const posAttr = settlingParticles.geometry.attributes.position;
+    const positions = posAttr.array;
+    const speeds = settlingParticles.userData.speeds;
+    const startRadii = settlingParticles.userData.radii;
+    const targetRadii = settlingParticles.userData.targetRadii;
+    const initialAngles = settlingParticles.userData.angles;
+    const topY = settlingParticles.userData.topY;
+    const bottomY = settlingParticles.userData.bottomY;
+    const num = positions.length / 3;
 
-flowMarkers.forEach(m=>{
+    // Velocidad angular sincronizada en la misma dirección que el barredor
+    const swirlSpeed = (vizMode === 'agua') ? 0.006 : 0.0025;
+    const hopperH = settlingParticles.userData.hopperH;
+    const rInt = settlingParticles.userData.rInt;
+    const hopperRBotInt = settlingParticles.userData.hopperRBotInt;
 
+    for(let i = 0; i < num; i++){
+      const idx = i * 3;
+      // Descenso gravitacional
+      positions[idx + 1] -= speeds[i];
+
+      // Expansión y gradiente radial a medida que decanta por los niveles
+      const curY = positions[idx + 1];
+      const progress = Math.max(0, Math.min(1, (topY - curY) / (topY - bottomY)));
+      const rawR = startRadii[i] + progress * (targetRadii[i] - startRadii[i]);
+
+      // Límite cónico estricto: en la tolva el radio máximo decrece linealmente hacia el fondo
+      let maxAllowedR = rInt * 0.94;
+      if(curY < hopperH){
+        const coneFrac = Math.max(0, curY / hopperH);
+        maxAllowedR = (hopperRBotInt + coneFrac * (rInt - hopperRBotInt)) * 0.93;
+      }
+      const curR = Math.min(maxAllowedR, rawR);
+      
+      // Giro en la misma dirección positiva (+Y) del barredor
+      const currentAngle = initialAngles[i] + flowTime * (swirlSpeed * 120);
+      positions[idx] = Math.sin(currentAngle) * curR;
+      positions[idx + 2] = Math.cos(currentAngle) * curR;
+
+      // Si llega al fondo (tolva/manto inferior), reiniciar arriba
+      if(positions[idx + 1] <= bottomY){
+        positions[idx + 1] = topY;
+      }
+    }
+    posAttr.needsUpdate = true;
+  }
+
+  // Animación del rebose sobre el vertedero (Chorros parabólicos de agua clarificada)
+  if(weirCascadesGroup && weirCascadesGroup.children.length){
+    weirCascadesGroup.children.forEach((c, i) => {
+      // Modulación de escala y brillo para simular flujo dinámico cayendo
+      const wave = Math.sin(flowTime * 14 + i * 0.4);
+      c.material.opacity = 0.70 + 0.25 * wave;
+      c.scale.set(1 + 0.08 * wave, 1, 1 + 0.05 * wave);
+    });
+  }
+
+  flowMarkers.forEach(m=>{
     // Factor global según el modo
-const t = (flowTime * m.speed + m.phase) % 1;
-
+    const t = (flowTime * m.speed + m.phase) % 1;
     const {pos, dir} = pointAlongPath(m.path, t);
     m.mesh.position.copy(pos);
     m.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir);
@@ -1352,9 +1414,10 @@ if(sectionView){
     tankGroup.add(cutFace);
   });
 }
+  
+  
 
-
- /*
+  /*
   ZONA DE AGUA CLARIFICADA Y MANTO DE LODO:
   - Exactamente 2 fluidos/estratos visuales:
     1. Capa superior de Agua Clarificada (color waterColor)
@@ -1365,7 +1428,7 @@ if(sectionView){
   const blanketTopY = hopperH + blanketH;
   const clarifiedWaterH = Math.max(0.05, waterSurfaceY - blanketTopY);
 
- // 1. MATERIAL Y VOLUMEN DE AGUA CLARIFICADA
+  // 1. MATERIAL Y VOLUMEN DE AGUA CLARIFICADA
   const waterMat = new THREE.MeshStandardMaterial({
     color: waterColor(),
     roughness: 0.2,
@@ -1447,15 +1510,14 @@ if(sectionView){
       tankGroup.add(sludgeHopperCut);
     });
   }
-     
-/*
+  /*
   TOLVA CÓNICA INFERIOR (con espesor estructural de hormigón):
   - Cara exterior cónica (conecta con el muro exterior a cota y=hopperH).
   - Cara interior cónica (conecta con el muro interior a cota y=hopperH).
   - Anillo de fondo en el ápice (borde de descarga de lodos a cota y=0).
   - Tapas laterales en vista en corte (sectionView) que cierran la sección cónica maciza.
   */
-    const hopperThick = wallThick; // 0.18 m de espesor estructural
+  const hopperThick = wallThick; // 0.18 m de espesor estructural
   const hopperRTopExt = rExt;
   const hopperRTopInt = rInt;
   const hopperRBotExt = hopperRBotInt + hopperThick;
@@ -1582,6 +1644,76 @@ if(sectionView){
 
   tankGroup.add(baffleGroup);
 
+  /*
+  SISTEMA DE PARTÍCULAS DE SEDIMENTACIÓN (Destacadas y confinadas):
+  Partículas con máximo contraste y confinadas estrictamente dentro del cono interior
+  de la tolva para que NUNCA traspasen el muro de hormigón ni el fondo cónico.
+  */
+  const particleCount = 800;
+  const particlePositions = new Float32Array(particleCount * 3);
+  const particleSpeeds = new Float32Array(particleCount);
+  const particleRadii = new Float32Array(particleCount);
+  const particleTargetRadii = new Float32Array(particleCount);
+  const particleAngles = new Float32Array(particleCount);
+
+  const partTopY = hopperH + wallH - 0.20;  // Nivel superior bajo la superficie
+  const partBottomY = 0.15;                  // Por encima del ápice de descarga de la tolva
+
+  for(let i = 0; i < particleCount; i++){
+    const idx = i * 3;
+    // Distribución angular completa de 360° (0 a 2*PI) sin cortar en vista en corte
+    const pAngle = Math.random() * Math.PI * 2;
+    
+    // El radio inicial en la parte superior
+    const startR = baffleRadiusBottom * (0.35 + Math.random() * 0.85);
+    const targetR = startR + Math.random() * (rInt * 0.90 - startR);
+    const pY = partBottomY + Math.random() * (partTopY - partBottomY);
+
+    // Calcular radio interior exacto del estanque para la cota pY
+    let maxAllowedR = rInt * 0.94;
+    if(pY < hopperH){
+      const coneFrac = Math.max(0, pY / hopperH);
+      maxAllowedR = (hopperRBotInt + coneFrac * (rInt - hopperRBotInt)) * 0.93;
+    }
+
+    const progress = (partTopY - pY) / (partTopY - partBottomY);
+    const rawR = startR + progress * (targetR - startR);
+    const curR = Math.min(maxAllowedR, rawR);
+
+    particlePositions[idx] = Math.sin(pAngle) * curR;
+    particlePositions[idx + 1] = pY;
+    particlePositions[idx + 2] = Math.cos(pAngle) * curR;
+
+    particleSpeeds[i] = (vizMode === 'relave' ? 0.007 : 0.013) * (0.5 + Math.random() * 0.9);
+    particleRadii[i] = startR;
+    particleTargetRadii[i] = targetR;
+    particleAngles[i] = pAngle;
+  }
+
+  const particleGeo = new THREE.BufferGeometry();
+  particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+  const particleMat = new THREE.PointsMaterial({
+    color: settlingParticleColor(),
+    size: vizMode === 'relave' ? 0.35 : 0.20,
+    transparent: true,
+    opacity: 1.0,
+    blending: THREE.NormalBlending
+  });
+
+  settlingParticles = new THREE.Points(particleGeo, particleMat);
+  settlingParticles.userData = {
+    speeds: particleSpeeds,
+    radii: particleRadii,
+    targetRadii: particleTargetRadii,
+    angles: particleAngles,
+    topY: partTopY,
+    bottomY: partBottomY,
+    hopperH: hopperH,
+    rInt: rInt,
+    hopperRBotInt: hopperRBotInt
+  };
+  tankGroup.add(settlingParticles);
+
 
   scraperGroup = new THREE.Group();
   // Factor de "robustez" del mecanismo de rastras: en modo relave los brazos y
@@ -1666,21 +1798,68 @@ if(sectionView){
     return a > th.length;
   }
 
-  const numNotches = Math.round(72 * (th.length / (Math.PI * 2)));
-const notchGeo = new THREE.ConeGeometry(0.08, 0.2, 3);
-for(let i = 0; i <= numNotches; i++) {
-  const angle = th.start + (i / numNotches) * th.length;
-  const notch = new THREE.Mesh(notchGeo, weirMat);
-  notch.position.set(
-    Math.sin(angle) * (r * 0.998),
-    hopperH + wallH + 0.2,
-    Math.cos(angle) * (r * 0.998)
+  weirCascadesGroup = new THREE.Group();
+  // Mayor densidad de muescas triangulares perimetrales (144 para el círculo completo)
+  const numNotches = Math.round(144 * (th.length / (Math.PI * 2)));
+  const dAngle = th.length / numNotches;
+  const chordW = 2 * r * Math.sin(dAngle / 2); // Ancho tangencial de cada paso
+
+  // Dientes triangulares planos alineados tangencialmente a la circunferencia
+  const toothHalfW = chordW * 0.48; // Mitad del ancho para casi tocarse con el diente contiguo
+  const toothShape = new THREE.Shape();
+  toothShape.moveTo(-toothHalfW, 0);
+  toothShape.lineTo(0, 0.14);
+  toothShape.lineTo(toothHalfW, 0);
+  toothShape.closePath();
+  const toothGeo = new THREE.ShapeGeometry(toothShape);
+
+  // Lámina curva del chorro de agua que rebosa por la 'V' entre dientes
+  const cascadeCurve = new THREE.QuadraticBezierCurve3(
+    new THREE.Vector3(0, 0.005, 0),        // Garganta / Vértice inferior de la 'V' entre dientes
+    new THREE.Vector3(0, -0.04, 0.10),     // Curva parabólica hacia el exterior
+    new THREE.Vector3(0, -0.22, 0.20)     // Caída al canal colector
+  );
+  const cascadeGeo = new THREE.TubeGeometry(cascadeCurve, 10, 0.016, 8, false);
+  const cascadeMat = new THREE.MeshStandardMaterial({
+    color: vizMode==='relave' ? 0xE5C158 : 0x7BE4F5,
+    roughness: 0.1,
+    metalness: 0.2,
+    transparent: true,
+    opacity: 0.88,
+    side: THREE.DoubleSide
+  });
+
+  // 1. Colocar los dientes triangulares en las posiciones enteras 'i', alineados tangencialmente a la circunferencia
+  for(let i = 0; i <= numNotches; i++) {
+    const angle = th.start + i * dAngle;
+    const tooth = new THREE.Mesh(toothGeo, weirMat);
+    tooth.position.set(
+      Math.sin(angle) * (r * 0.998),
+      hopperH + wallH + 0.15,
+      Math.cos(angle) * (r * 0.998)
     );
-    weirGroup.add(notch);
+    // Orientación tangencial plana: la normal del plano apunta radialmente hacia afuera
+    tooth.rotation.y = angle;
+    weirGroup.add(tooth);
   }
+
+  // 2. Colocar los chorros de agua en el ESPACIO INTERMEDIO (valles en 'V') entre cada dos dientes (i + 0.5)
+  for(let i = 0; i < numNotches; i++) {
+    const notchValleyAngle = th.start + (i + 0.5) * dAngle;
+    const cascade = new THREE.Mesh(cascadeGeo, cascadeMat.clone());
+    cascade.position.set(
+      Math.sin(notchValleyAngle) * (r * 1.002),
+      hopperH + wallH + 0.15,
+      Math.cos(notchValleyAngle) * (r * 1.002)
+    );
+    cascade.rotation.y = notchValleyAngle;
+    weirCascadesGroup.add(cascade);
+  }
+
+  weirGroup.add(weirCascadesGroup);
   tankGroup.add(weirGroup);
 
-/*
+  /*
   CANALETA PERIMETRAL (con espesor estructural de hormigón):
   - Pared exterior con espesor: cara exterior, cara interior y coronamiento superior.
   - Losa de fondo con espesor: cara superior interior y cara inferior exterior.
@@ -1878,6 +2057,7 @@ function drawFlowArrows(D){
     flowArrowsGroup.remove(flowArrowsGroup.children[0]);
   }
   flowMarkers = [];
+
 
 
   /*
