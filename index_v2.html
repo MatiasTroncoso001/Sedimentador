@@ -940,6 +940,80 @@ let vizMode = 'relave'; // 'agua' (clarificador) | 'relave' (espesador minero) �
 let sectionView = false; // true = vista en corte (cuña removida, como un molde de torta)
 let currentDiameter = 0;
 
+// Altura de las columnas de hormigón que elevan el sedimentador sobre el
+// nivel del piso. Con esto la tolva y la tubería de descarga de lodos/relave
+// (que baja por debajo del ápice) quedan siempre por encima del piso (y=0),
+// en vez de aparecer "enterradas" bajo la grilla del suelo.
+const TANK_STAND_H = 2.0;
+
+// Textura de hormigón (procedural, generada una sola vez en un canvas) para
+// las paredes del sedimentador y la estructura de columnas de soporte.
+let _concreteBaseTexture = null;
+function getConcreteBaseTexture(){
+  if(_concreteBaseTexture) return _concreteBaseTexture;
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  // Tono base de hormigón
+  ctx.fillStyle = '#B7B5AC';
+  ctx.fillRect(0, 0, size, size);
+
+  // Grano fino (ruido) típico del hormigón
+  const imgData = ctx.getImageData(0, 0, size, size);
+  const px = imgData.data;
+  for(let i = 0; i < px.length; i += 4){
+    const n = (Math.random() - 0.5) * 30;
+    px[i]   = Math.min(255, Math.max(0, px[i]   + n));
+    px[i+1] = Math.min(255, Math.max(0, px[i+1] + n));
+    px[i+2] = Math.min(255, Math.max(0, px[i+2] + n));
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  // Manchas suaves (variaciones de curado / humedad)
+  for(let i = 0; i < 45; i++){
+    const x = Math.random() * size, y = Math.random() * size;
+    const rad = 18 + Math.random() * 55;
+    const grad = ctx.createRadialGradient(x, y, 0, x, y, rad);
+    const shade = Math.random() < 0.5 ? 'rgba(80,78,72,0.12)' : 'rgba(235,233,225,0.12)';
+    grad.addColorStop(0, shade);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x, y, rad, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Juntas de encofrado (paneles típicos del hormigón vaciado in situ)
+  ctx.strokeStyle = 'rgba(65,63,58,0.35)';
+  ctx.lineWidth = 2;
+  for(let px2 = size/4; px2 < size; px2 += size/4){
+    ctx.beginPath(); ctx.moveTo(px2, 0); ctx.lineTo(px2, size); ctx.stroke();
+  }
+  for(let py2 = size/3; py2 < size; py2 += size/3){
+    ctx.beginPath(); ctx.moveTo(0, py2); ctx.lineTo(size, py2); ctx.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  _concreteBaseTexture = tex;
+  return tex;
+}
+
+// Devuelve una instancia clonada de la textura de hormigón con su propio
+// nivel de repetición (necesario porque cada superficie —muro, columnas—
+// requiere un "repeat" distinto, y THREE.Texture.repeat es por instancia).
+function concreteTexture(repeatX, repeatY){
+  const tex = getConcreteBaseTexture().clone();
+  tex.needsUpdate = true;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(repeatX, repeatY);
+  return tex;
+}
+
 // Ángulo de la cuña que se remueve en la vista en corte (~80°), centrado
 // hacia la cámara para que se vea el interior sin tener que rotar el modelo.
 const CUT_WEDGE = Math.PI * 0.44;
@@ -1225,13 +1299,20 @@ function drawTank3D(D, wlrStatusCls){
   const hopperH = 2.4;
   const th = sectionTheta();
 
+  // El sedimentador completo se eleva sobre el nivel del piso (y=0), apoyado
+  // sobre columnas de hormigón (ver ESTRUCTURA DE SOPORTE más abajo). Esto
+  // evita que la tubería de descarga de lodos/relave quede por debajo del
+  // nivel del suelo.
+  tankGroup.position.y = TANK_STAND_H;
+
   const wallGeo = new THREE.CylinderGeometry(r, r, wallH, 48, 1, true, th.start, th.length);
+  const wallConcreteTex = concreteTexture(Math.max(4, Math.round(r*2*Math.PI/3)), Math.max(1, Math.round(wallH/1.6)));
   const wallMat = new THREE.MeshStandardMaterial({
-    color: 0xC7D6D0, 
-    side: THREE.DoubleSide, 
-    roughness: 0.8,
-    transparent: true,
-    opacity: 0.72
+    map: wallConcreteTex,
+    color: 0xffffff,
+    side: THREE.DoubleSide,
+    roughness: 0.95,
+    metalness: 0.02
   });
   const wall = new THREE.Mesh(wallGeo, wallMat);
   wall.position.y = hopperH + wallH/2;
@@ -1263,9 +1344,18 @@ function drawTank3D(D, wlrStatusCls){
   sludgeBlanketMesh.position.y = hopperH + blanketH/2;
   tankGroup.add(sludgeBlanketMesh);
 
-  const blanketTopGeo = new THREE.CircleGeometry(r*0.97, 48, th.start, th.length);
+  /*
+  Tapa superior del manto: se usa un CylinderGeometry de altura mínima (igual
+  criterio que waterGeo) en lugar de un CircleGeometry rotado. CircleGeometry
+  parametriza su ángulo en el plano local XY y, al rotarlo para dejarlo
+  horizontal, su cuña quedaba desfasada 90° respecto del resto de las piezas
+  (muro, agua, tolva, vertedero), que usan CylinderGeometry: en vista en
+  corte esto hacía que la cuña removida del manto no coincidiera con la del
+  resto del estanque. Con CylinderGeometry el ángulo queda parametrizado
+  exactamente igual que en las demás piezas, por lo que el corte coincide.
+  */
+  const blanketTopGeo = new THREE.CylinderGeometry(r*0.97, r*0.97, 0.02, 48, 1, false, th.start, th.length);
   const blanketTop = new THREE.Mesh(blanketTopGeo, blanketMat);
-  blanketTop.rotation.x = -Math.PI/2;
   blanketTop.position.y = hopperH + blanketH;
   tankGroup.add(blanketTop);
 
@@ -1279,6 +1369,69 @@ function drawTank3D(D, wlrStatusCls){
   const hopper = new THREE.Mesh(hopperGeo, hopperMat);
   hopper.position.y = hopperH/2;
   tankGroup.add(hopper);
+
+  /*
+  ESTRUCTURA DE SOPORTE (columnas de hormigón)
+  El estanque queda apoyado sobre columnas que van desde el piso (y=0 en
+  coordenadas del mundo, es decir y=-TANK_STAND_H dentro de tankGroup) hasta
+  la base de la tolva / arranque del muro (y=hopperH), que es donde el
+  estanque tiene su mayor diámetro y por lo tanto el punto natural de apoyo.
+  Con esto el sedimentador queda levantado del piso y su tubería de descarga
+  (que baja por debajo del ápice de la tolva) también queda siempre visible
+  por sobre el nivel del suelo.
+  */
+  const supportGroup = new THREE.Group();
+  const colBottomY = -TANK_STAND_H;   // nivel del piso
+  const colTopY = hopperH;            // arranque del muro / borde superior de la tolva
+  const colHeight = colTopY - colBottomY;
+  const nCols = 6;
+  const colRing = r * 0.88;
+
+  const colGeo = new THREE.CylinderGeometry(0.16, 0.20, colHeight, 14);
+  const colConcreteTex = concreteTexture(1, Math.max(1, Math.round(colHeight/1.4)));
+  const supportMat = new THREE.MeshStandardMaterial({map: colConcreteTex, color:0xffffff, roughness:0.95, metalness:0.02});
+
+  const colPositions = [];
+  for(let i=0; i<nCols; i++){
+    const angle = (i / nCols) * Math.PI * 2 + Math.PI/nCols;
+    const cx = Math.cos(angle) * colRing;
+    const cz = Math.sin(angle) * colRing;
+    colPositions.push({cx, cz});
+
+    const col = new THREE.Mesh(colGeo, supportMat);
+    col.position.set(cx, (colTopY + colBottomY)/2, cz);
+    supportGroup.add(col);
+
+    // Zapata de fundación de cada columna, apoyada en el piso
+    const footing = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.22, 0.55), supportMat);
+    footing.position.set(cx, colBottomY + 0.11, cz);
+    supportGroup.add(footing);
+  }
+
+  // Viga anillo que amarra las zapatas de las columnas a nivel de piso.
+  // (Antes se ubicaba junto al borde superior de la tolva, a radio menor
+  // que el propio estanque en esa altura, por lo que terminaba "flotando"
+  // dentro del sedimentador y se veía en la vista en corte. Al ubicarla
+  // abajo, junto a las zapatas, queda siempre por fuera y por debajo del
+  // sedimentador.)
+  const ringBeam = new THREE.Mesh(new THREE.TorusGeometry(colRing, 0.12, 10, 48), supportMat);
+  ringBeam.rotation.x = Math.PI/2;
+  ringBeam.position.y = colBottomY + 0.18;
+  supportGroup.add(ringBeam);
+
+  // Arriostramiento horizontal a media altura entre columnas consecutivas
+  const braceY = (colTopY + colBottomY) / 2;
+  for(let i=0; i<nCols; i++){
+    const a = colPositions[i], b = colPositions[(i+1) % nCols];
+    const dx = b.cx - a.cx, dz = b.cz - a.cz;
+    const dist = Math.sqrt(dx*dx + dz*dz);
+    const brace = new THREE.Mesh(new THREE.BoxGeometry(dist, 0.12, 0.12), supportMat);
+    brace.position.set((a.cx + b.cx)/2, braceY, (a.cz + b.cz)/2);
+    brace.rotation.y = -Math.atan2(dz, dx);
+    supportGroup.add(brace);
+  }
+
+  tankGroup.add(supportGroup);
 
   const baffleGroup = new THREE.Group();
   const baffleRadiusTop = r * 0.20;
@@ -1413,22 +1566,22 @@ function drawTank3D(D, wlrStatusCls){
   troughWater.position.y = hopperH + wallH - 0.08;
   tankGroup.add(troughWater);
 
-  const effluentPipeMat = new THREE.MeshStandardMaterial({color: 0x1B4B63, roughness: 0.4, transparent:true, opacity:0.35, depthWrite:false});
+  /*
+  Tubería de salida (efluente): usa exactamente el mismo material y radio
+  que la tubería de entrada (pipeMat, radio 0.2 — el mismo diámetro que las
+  flechas de flujo), para que ambas cañerías se vean consistentes: un tubo
+  transparente único, sin un "núcleo" de líquido opaco aparte (el flujo se
+  representa con las flechas animadas, igual que en la entrada).
+  */
+  const pipeMat = new THREE.MeshStandardMaterial({color:0x3E6E8A, roughness:0.4, metalness:0.15, transparent:true, opacity:0.32, depthWrite:false});
+
   const effluentPipeLen = 1.6;
-  const effluentPipeGeo = new THREE.CylinderGeometry(0.12, 0.12, effluentPipeLen, 16);
-  const effluentPipe = new THREE.Mesh(effluentPipeGeo, effluentPipeMat);
+  const effluentPipeGeo = new THREE.CylinderGeometry(0.2, 0.2, effluentPipeLen, 16);
+  const effluentPipe = new THREE.Mesh(effluentPipeGeo, pipeMat);
   effluentPipe.rotation.z = Math.PI / 2;
   effluentPipe.position.set(-(troughOuterR + effluentPipeLen / 2), hopperH + wallH - 0.08, 0);
   tankGroup.add(effluentPipe);
 
-  const effluentLiquidMat = new THREE.MeshStandardMaterial({color: outletColor(), roughness: 0.2, metalness: 0.05, transparent:true, opacity: 0.9});
-  const effluentLiquidGeo = new THREE.CylinderGeometry(0.075, 0.075, effluentPipeLen - 0.06, 16);
-  const effluentLiquid = new THREE.Mesh(effluentLiquidGeo, effluentLiquidMat);
-  effluentLiquid.rotation.z = Math.PI / 2;
-  effluentLiquid.position.copy(effluentPipe.position);
-  tankGroup.add(effluentLiquid);
-
-  const pipeMat = new THREE.MeshStandardMaterial({color:0x3E6E8A, roughness:0.4, metalness:0.15, transparent:true, opacity:0.32, depthWrite:false});
   const pipeY = hopperH + wallH + 1.5;
 
   const horizPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, r*1.6, 20), pipeMat);
@@ -1482,7 +1635,7 @@ function drawTank3D(D, wlrStatusCls){
     tankGroup.add(leg);
   });
 
-  controls3d.target.set(0, hopperH + wallH/2, 0);
+  controls3d.target.set(0, TANK_STAND_H + hopperH + wallH/2, 0);
 drawFlowArrows(D);
 }
 function makeFlowMarker(color){
@@ -1523,9 +1676,10 @@ function drawFlowArrows(D){
   const r = Math.max(3.2, D*9/20);
   const wallH = 3.2;
   const hopperH = 2.4;
-  const pipeY = hopperH + wallH + 1.5;          // 7.1 — codo del alimentador
-  const vertPipeBottom = hopperH + wallH*0.6;    // 4.32 — extremo inferior del bajante
-  const troughY = hopperH + wallH - 0.08;        // 5.52 — nivel de agua en canal perimetral
+  const y0 = TANK_STAND_H;                       // el estanque completo está elevado sobre columnas
+  const pipeY = y0 + hopperH + wallH + 1.5;          // codo del alimentador
+  const vertPipeBottom = y0 + hopperH + wallH*0.6;    // extremo inferior del bajante
+  const troughY = y0 + hopperH + wallH - 0.08;        // nivel de agua en canal perimetral
   const troughOuterR = r + 0.45;                 // borde exterior del canal perimetral
 
 // =====================================================
@@ -1581,9 +1735,9 @@ addFlowLine(inletPath, inletColor(), inletSpeed, 5);
   */
 
   const sludgePath = [
-    new THREE.Vector3(0, -0.05, 0),
-    new THREE.Vector3(0, -1.15, 0),
-    new THREE.Vector3(2.3, -1.15, 0)
+    new THREE.Vector3(0, y0 - 0.05, 0),
+    new THREE.Vector3(0, y0 - 1.15, 0),
+    new THREE.Vector3(2.3, y0 - 1.15, 0)
   ];
 addFlowLine(sludgePath, sludgeColor(), sludgeSpeed, 5);
 
