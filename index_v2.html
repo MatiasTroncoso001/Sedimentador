@@ -1582,25 +1582,109 @@ for(let i = 0; i <= numNotches; i++) {
   }
   tankGroup.add(weirGroup);
 
-  const troughWidth = 0.45;
-  const troughOuterR = r + troughWidth;
-  const troughConcreteMat = new THREE.MeshStandardMaterial({color: 0x9EAFA8, roughness: 0.8, side: THREE.DoubleSide});
-  const troughWaterMat = new THREE.MeshStandardMaterial({color: troughColor(), roughness: 0.2, transparent: true, opacity: 0.85});
+/*
+  CANALETA PERIMETRAL (con espesor estructural de hormigón):
+  - Pared exterior con espesor: cara exterior, cara interior y coronamiento superior.
+  - Losa de fondo con espesor: cara superior interior y cara inferior exterior.
+  - En vista en corte (sectionView): tapas laterales en los extremos del corte
+    para mostrar la sección transversal sólida en "U" de hormigón.
+  - Lámina de agua clarificada dentro del canal.
+  */
+  const troughChannelW = 0.45;        // Ancho libre del canal donde fluye el agua
+  const troughWallThick = 0.12;       // Espesor del muro exterior de la canaleta
+  const troughFloorThick = 0.10;      // Espesor de la losa de fondo de la canaleta
 
-  const troughOuterWallGeo = new THREE.CylinderGeometry(troughOuterR, troughOuterR, 0.45, 48, 1, true, th.start, th.length);
-  const troughOuterWall = new THREE.Mesh(troughOuterWallGeo, troughConcreteMat);
-  troughOuterWall.position.y = hopperH + wallH + 0.025;
-  tankGroup.add(troughOuterWall);
+  const troughInnerR = rExt;
+  const troughChannelExtR = rExt + troughChannelW;
+  const troughOuterExtR = troughChannelExtR + troughWallThick;
 
-const troughFloorGeo = new THREE.CylinderGeometry(troughOuterR, r, 0.02, 48, 1, true, th.start, th.length);
-const troughFloor = new THREE.Mesh(troughFloorGeo, troughConcreteMat);
-troughFloor.position.y = hopperH + wallH - 0.2;
-tankGroup.add(troughFloor);
+  const troughTopY = hopperH + wallH + 0.25;
+  const troughFloorTopY = hopperH + wallH - 0.20;
+  const troughFloorBottomY = troughFloorTopY - troughFloorThick;
+  const troughWallH = troughTopY - troughFloorBottomY;
 
-const troughWaterGeo = new THREE.CylinderGeometry(troughOuterR * 0.98, r * 1.002, 0.02, 48, 1, true, th.start, th.length);
-const troughWater = new THREE.Mesh(troughWaterGeo, troughWaterMat);
-troughWater.position.y = hopperH + wallH - 0.08;
-tankGroup.add(troughWater);
+  const troughConcreteTex = concreteTexture(Math.max(4, Math.round(troughOuterExtR * 2 * Math.PI / 3)), 1);
+  const troughConcreteMat = new THREE.MeshStandardMaterial({
+    map: troughConcreteTex,
+    color: 0xffffff,
+    roughness: 0.95,
+    metalness: 0.02,
+    side: THREE.DoubleSide
+  });
+  const troughWaterMat = new THREE.MeshStandardMaterial({
+    color: troughColor(),
+    roughness: 0.2,
+    transparent: true,
+    opacity: 0.85
+  });
+
+  // A) Pared exterior de la canaleta - cara exterior
+  const troughWallExtGeo = new THREE.CylinderGeometry(troughOuterExtR, troughOuterExtR, troughWallH, 48, 1, true, th.start, th.length);
+  const troughWallExt = new THREE.Mesh(troughWallExtGeo, troughConcreteMat);
+  troughWallExt.position.y = (troughTopY + troughFloorBottomY) / 2;
+  tankGroup.add(troughWallExt);
+
+  // B) Pared exterior de la canaleta - cara interior
+  const troughWallIntH = troughTopY - troughFloorTopY;
+  const troughWallIntGeo = new THREE.CylinderGeometry(troughChannelExtR, troughChannelExtR, troughWallIntH, 48, 1, true, th.start, th.length);
+  const troughWallInt = new THREE.Mesh(troughWallIntGeo, troughConcreteMat);
+  troughWallInt.position.y = (troughTopY + troughFloorTopY) / 2;
+  tankGroup.add(troughWallInt);
+
+  // C) Coronamiento superior del muro de la canaleta
+  const troughWallTopGeo = new THREE.CylinderGeometry(troughOuterExtR, troughChannelExtR, 0.02, 48, 1, true, th.start, th.length);
+  const troughWallTop = new THREE.Mesh(troughWallTopGeo, troughConcreteMat);
+  troughWallTop.position.y = troughTopY;
+  tankGroup.add(troughWallTop);
+
+  // D) Fondo de la canaleta - cara superior (piso interior)
+  const troughFloorTopGeo = new THREE.CylinderGeometry(troughChannelExtR, troughInnerR, 0.02, 48, 1, true, th.start, th.length);
+  const troughFloorTop = new THREE.Mesh(troughFloorTopGeo, troughConcreteMat);
+  troughFloorTop.position.y = troughFloorTopY;
+  tankGroup.add(troughFloorTop);
+
+  // E) Fondo de la canaleta - cara inferior (voladizo exterior)
+  const troughFloorBottomGeo = new THREE.CylinderGeometry(troughOuterExtR, troughInnerR, 0.02, 48, 1, true, th.start, th.length);
+  const troughFloorBottom = new THREE.Mesh(troughFloorBottomGeo, troughConcreteMat);
+  troughFloorBottom.position.y = troughFloorBottomY;
+  tankGroup.add(troughFloorBottom);
+
+  // F) Tapas laterales para vista en corte (sección en "U" sólida)
+  if(sectionView){
+    const angles = [th.start, th.start + th.length];
+    angles.forEach(angle => {
+      // Tapa del muro exterior de la canaleta
+      const wallCutGeo = new THREE.PlaneGeometry(troughWallThick, troughWallIntH);
+      const wallCut = new THREE.Mesh(wallCutGeo, troughConcreteMat);
+      const midRWall = (troughOuterExtR + troughChannelExtR) / 2;
+      wallCut.position.set(
+        Math.sin(angle) * midRWall,
+        (troughTopY + troughFloorTopY) / 2,
+        Math.cos(angle) * midRWall
+      );
+      wallCut.rotation.y = angle + Math.PI / 2;
+      tankGroup.add(wallCut);
+
+      // Tapa de la losa de fondo de la canaleta
+      const floorCutW = troughOuterExtR - troughInnerR;
+      const floorCutGeo = new THREE.PlaneGeometry(floorCutW, troughFloorThick);
+      const floorCut = new THREE.Mesh(floorCutGeo, troughConcreteMat);
+      const midRFloor = (troughOuterExtR + troughInnerR) / 2;
+      floorCut.position.set(
+        Math.sin(angle) * midRFloor,
+        (troughFloorTopY + troughFloorBottomY) / 2,
+        Math.cos(angle) * midRFloor
+      );
+      floorCut.rotation.y = angle + Math.PI / 2;
+      tankGroup.add(floorCut);
+    });
+  }
+
+  // G) Lámina de agua dentro de la canaleta
+  const troughWaterGeo = new THREE.CylinderGeometry(troughChannelExtR * 0.99, troughInnerR * 1.002, 0.02, 48, 1, true, th.start, th.length);
+  const troughWater = new THREE.Mesh(troughWaterGeo, troughWaterMat);
+  troughWater.position.y = hopperH + wallH - 0.08;
+  tankGroup.add(troughWater);
 
   /*
   Tubería de salida (efluente): usa exactamente el mismo material y radio
@@ -1615,7 +1699,7 @@ tankGroup.add(troughWater);
   const effluentPipeGeo = new THREE.CylinderGeometry(0.2, 0.2, effluentPipeLen, 16);
   const effluentPipe = new THREE.Mesh(effluentPipeGeo, pipeMat);
   effluentPipe.rotation.z = Math.PI / 2;
-  effluentPipe.position.set(-(troughOuterR + effluentPipeLen / 2), hopperH + wallH - 0.08, 0);
+  effluentPipe.position.set(-(troughOuterExtR + effluentPipeLen / 2), hopperH + wallH - 0.08, 0);
   tankGroup.add(effluentPipe);
 
   const pipeY = hopperH + wallH + 1.5;
@@ -1716,7 +1800,7 @@ function drawFlowArrows(D){
   const pipeY = y0 + hopperH + wallH + 1.5;          // codo del alimentador
   const vertPipeBottom = y0 + hopperH + wallH*0.6;    // extremo inferior del bajante
   const troughY = y0 + hopperH + wallH - 0.08;        // nivel de agua en canal perimetral
-  const troughOuterR = r + 0.45;                 // borde exterior del canal perimetral
+  const troughOuterR = r + 0.45 + 0.12;                 //ancho canal (0.45) + espesor muro(0.12)
 
 // =====================================================
 // Velocidades según modo de operación
