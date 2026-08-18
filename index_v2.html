@@ -1439,7 +1439,7 @@ function drawTank3D(D, wlrStatusCls){
   const baffleH = wallH * 0.65;
 
   // Deflector central: se mantiene liso/redondeado (así se ve bien en la realidad).
-  const baffleGeo = new THREE.CylinderGeometry(baffleRadiusTop, baffleRadiusBottom, baffleH, 48, 1, true);
+  const baffleGeo = new THREE.CylinderGeometry(baffleRadiusTop, baffleRadiusBottom, baffleH, 48, 1, true, th.start, th.length);
   const baffleMat = new THREE.MeshStandardMaterial({color: 0x1B4B63, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.3});
   const baffleMesh = new THREE.Mesh(baffleGeo, baffleMat);
   baffleMesh.position.y = hopperH + wallH - (baffleH / 2);
@@ -1521,24 +1521,25 @@ function drawTank3D(D, wlrStatusCls){
   weirWire.position.copy(weirRing.position);
   weirGroup.add(weirWire);
 
+     
   // En vista en corte, se omiten las muescas que caerían dentro de la cuña
   // removida (para no dejarlas "flotando" sobre el hueco).
+     
   function angleInsideCut(angle){
     if(!sectionView) return false;
     let a = ((angle - th.start) % (Math.PI*2) + Math.PI*2) % (Math.PI*2);
     return a > th.length;
   }
 
-  const numNotches = 72;
-  const notchGeo = new THREE.ConeGeometry(0.08, 0.2, 3);
-  for(let i = 0; i < numNotches; i++) {
-    const angle = (i / numNotches) * Math.PI * 2;
-    if(angleInsideCut(angle)) continue;
-    const notch = new THREE.Mesh(notchGeo, weirMat);
-    notch.position.set(
-      Math.cos(angle) * (r * 0.998),
-      hopperH + wallH + 0.2,
-      Math.sin(angle) * (r * 0.998)
+  const numNotches = Math.round(72 * (th.length / (Math.PI * 2)));
+const notchGeo = new THREE.ConeGeometry(0.08, 0.2, 3);
+for(let i = 0; i <= numNotches; i++) {
+  const angle = th.start + (i / numNotches) * th.length;
+  const notch = new THREE.Mesh(notchGeo, weirMat);
+  notch.position.set(
+    Math.sin(angle) * (r * 0.998),
+    hopperH + wallH + 0.2,
+    Math.cos(angle) * (r * 0.998)
     );
     weirGroup.add(notch);
   }
