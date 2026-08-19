@@ -938,6 +938,7 @@ let flowMarkers = [];
 let flowTime = 0;
 let settlingParticles = null;
 let weirCascadesGroup = null;
+let troughFlowParticles = null;
 let vizMode = 'relave'; // 'agua' (clarificador) | 'relave' (espesador minero) — modo por defecto
 let sectionView = false; // true = vista en corte (cuña removida, como un molde de torta)
 let currentDiameter = 0;
@@ -1330,7 +1331,34 @@ function animate3D(){
       c.scale.set(1 + 0.08 * wave, 1, 1 + 0.05 * wave);
     });
   }
+   // Animación del agua acumulada fluyendo por la canaleta hacia la tubería efluente
+  if(troughFlowParticles && troughFlowParticles.geometry.attributes.position){
+    const posAttr = troughFlowParticles.geometry.attributes.position;
+    const positions = posAttr.array;
+    const angles = troughFlowParticles.userData.angles;
+    const radii = troughFlowParticles.userData.radii;
+    const speeds = troughFlowParticles.userData.speeds;
+    const yList = troughFlowParticles.userData.yList;
+    const thStart = troughFlowParticles.userData.thStart;
+    const thLength = troughFlowParticles.userData.thLength;
+    const num = positions.length / 3;
 
+    for(let i = 0; i < num; i++){
+      const idx = i * 3;
+      // Avance angular circular a lo largo de la canaleta perimetral
+      angles[i] += speeds[i];
+      if(angles[i] > thStart + thLength){
+        angles[i] = thStart;
+      }
+      const curA = angles[i];
+      const curR = radii[i];
+      positions[idx] = Math.sin(curA) * curR;
+      positions[idx + 1] = yList[i] + 0.005 * Math.sin(flowTime * 10 + i);
+      positions[idx + 2] = Math.cos(curA) * curR;
+    }
+    posAttr.needsUpdate = true;
+  }
+     
   flowMarkers.forEach(m=>{
     // Factor global según el modo
     const t = (flowTime * m.speed + m.phase) % 1;
@@ -1957,12 +1985,85 @@ if(sectionView){
     });
   }
 
-  // G) Lámina de agua dentro de la canaleta
-  const troughWaterGeo = new THREE.CylinderGeometry(troughChannelExtR * 0.99, troughInnerR * 1.002, 0.02, 48, 1, true, th.start, th.length);
+  // G) Volumen de agua clarificada acumulada dentro de la canaleta
+  const troughWaterLevelY = hopperH + wallH - 0.05; // Nivel de llenado del agua en el canal
+  const troughWaterDepth = troughWaterLevelY - troughFloorTopY; // Altura acumulada de líquido (~0.15 m)
+  const troughWaterMidR = (troughChannelExtR + troughInnerR) / 2;
+  const troughWaterWidth = troughChannelExtR - troughInnerR;
+
+  const troughWaterGeo = new THREE.CylinderGeometry(
+    troughChannelExtR * 0.998,
+    troughInnerR * 1.002,
+    troughWaterDepth,
+    48, 1, false, th.start, th.length
+  );
   const troughWater = new THREE.Mesh(troughWaterGeo, troughWaterMat);
-  troughWater.position.y = hopperH + wallH - 0.08;
+  troughWater.position.y = troughFloorTopY + troughWaterDepth / 2;
   tankGroup.add(troughWater);
 
+  // En vista en corte: tapas de agua en los extremos del canal
+  if(sectionView){
+    const angles = [th.start, th.start + th.length];
+    angles.forEach(angle => {
+      const waterEndCutGeo = new THREE.PlaneGeometry(troughWaterWidth * 0.98, troughWaterDepth * 0.98);
+      const waterEndCut = new THREE.Mesh(waterEndCutGeo, troughWaterMat);
+      waterEndCut.position.set(
+        Math.sin(angle) * troughWaterMidR,
+        troughFloorTopY + troughWaterDepth / 2,
+        Math.cos(angle) * troughWaterMidR
+      );
+      waterEndCut.rotation.y = angle + Math.PI / 2;
+      tankGroup.add(waterEndCut);
+    });
+  }
+
+  // H) Partículas y trazadores de corriente dentro del agua de la canaleta
+  const troughPCount = 180;
+  const troughPPos = new Float32Array(troughPCount * 3);
+  const troughPAngles = new Float32Array(troughPCount);
+  const troughPRadii = new Float32Array(troughPCount);
+  const troughPSpeeds = new Float32Array(troughPCount);
+  const troughPY = new Float32Array(troughPCount);
+
+  for(let i = 0; i < troughPCount; i++){
+    const idx = i * 3;
+    const a = th.start + Math.random() * th.length;
+    const rT = troughInnerR + 0.05 + Math.random() * (troughWaterWidth - 0.10);
+    const yT = troughFloorTopY + 0.02 + Math.random() * (troughWaterDepth - 0.04);
+
+    troughPPos[idx] = Math.sin(a) * rT;
+    troughPPos[idx + 1] = yT;
+    troughPPos[idx + 2] = Math.cos(a) * rT;
+
+    troughPAngles[i] = a;
+    troughPRadii[i] = rT;
+    troughPY[i] = yT;
+    troughPSpeeds[i] = (vizMode === 'relave' ? 0.008 : 0.018) * (0.8 + Math.random() * 0.4);
+  }
+
+  const troughPGeo = new THREE.BufferGeometry();
+  troughPGeo.setAttribute('position', new THREE.BufferAttribute(troughPPos, 3));
+  const troughPMat = new THREE.PointsMaterial({
+    color: vizMode === 'relave' ? 0xFFE082 : 0x80F0FF,
+    size: 0.18,
+    transparent: true,
+    opacity: 0.95,
+    blending: THREE.NormalBlending
+  });
+  troughFlowParticles = new THREE.Points(troughPGeo, troughPMat);
+  troughFlowParticles.userData = {
+    angles: troughPAngles,
+    radii: troughPRadii,
+    speeds: troughPSpeeds,
+    yList: troughPY,
+    thStart: th.start,
+    thLength: th.length
+  };
+  tankGroup.add(troughFlowParticles);
+
+
+
+     
   /*
   Tubería de salida (efluente): usa exactamente el mismo material y radio
   que la tubería de entrada (pipeMat, radio 0.2 — el mismo diámetro que las
