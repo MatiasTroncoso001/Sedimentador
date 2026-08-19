@@ -714,14 +714,15 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
     <div class="video-embed">
       <iframe
         src="https://www.youtube.com/embed/2I_eYvd38QU"
-        title="Partes de un sedimentador circular"
+        title="Animación 3D de un espesador de alta velocidad (Diemme Filtration)"
         frameborder="0"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowfullscreen>
       </iframe>
     </div>
-    <p class="hint" style="margin-top:.5rem;">Video explicativo de las partes del sedimentador (pozo central, deflector, vertedero, rastras de fondo, poza de lodos).</p>
+    <p class="hint" style="margin-top:.5rem;">Animación 3D de un espesador de alta velocidad ("high-rate thickener"), cortesía de Diemme Filtration. Es un equipo de mayor tecnología que el espesador convencional de este REA, pero permite reconocer las mismas partes constitutivas: pozo de alimentación central, vertedero perimetral, rastras de fondo y descarga de lodos.</p>
   </div>
+
 
   <div class="card accent-plain" style="margin-bottom:1.5rem;">
     <h2>Limitaciones del modelo</h2>
@@ -739,7 +740,16 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
     <p style="font-size:13px;line-height:1.6;color:var(--muted);margin:0;padding-top:.7rem;border-top:1px dashed var(--line);">
       Estas simplificaciones son razonables para introducir los conceptos de SOR/WLR/SLR en un curso de ingeniería sanitaria. Son más delicadas en modo espesador de relave: ahí el diseño real depende de ensayos de sedimentación del mineral específico (Coe-Clevenger/Kynch), que este simulador no reemplaza. Aquí solo sirve para introducir el concepto y comparar cualitativamente ambos procesos.
     </p>
+    <details class="refs" style="margin-top:.8rem;">
+      <summary>Fuentes y enlaces para verificar los valores de diseño</summary>
+      <ul style="font-size:11.5px;line-height:1.7;color:var(--muted);margin:.6rem 0 0;padding-left:1.1rem;">
+        <li><strong>Clarificador de agua</strong> — Metcalf &amp; Eddy / Tchobanoglous et al. (2014), <em>Wastewater Engineering: Treatment and Resource Recovery</em>, 5.ª ed. (McGraw-Hill), complementado con ASCE/WEF <em>Manual of Practice N.º 8</em>. Para contrastar el orden de magnitud con fuentes de acceso abierto: <a href="https://www.toolgrit.com/tools/clarifier-loading-calculator" target="_blank" rel="noopener">calculadora de cargas de clarificadores (resume Ten States Standards / WEF MOP 8)</a> y <a href="https://law.lis.virginia.gov/admincode/title9/agency25/chapter790/section530/" target="_blank" rel="noopener">reglamento público 9VAC25-790-530 (ejemplo de norma con cargas de vertedero del mismo orden)</a>.</li>
+        <li><strong>Espesador de relave</strong> — Wills &amp; Finch (2016), <em>Wills' Mineral Processing Technology</em>, 8.ª ed. (Butterworth-Heinemann). Lecturas complementarias de acceso abierto y contexto local: <a href="https://repositorio.uchile.cl/handle/2250/147104" target="_blank" rel="noopener">"Estudio y evaluación del sistema de espesadores de relave", Universidad de Chile</a> y <a href="https://metalvam.cl/relaves/espesador_relaves/" target="_blank" rel="noopener">balance de masas de un espesador de relaves (metalvam.cl)</a>.</li>
+        <li>Ensayos de sedimentación para diseño real: método de <strong>Coe &amp; Clevenger (1916)</strong> y procedimiento de <strong>Kynch (1952)</strong>, citados en la bibliografía anterior.</li>
+      </ul>
+    </details>
   </div>
+
 
   <div class="grid">
 
@@ -936,9 +946,6 @@ let currentWlrStatusCls = 'status-ok';
 let flowArrowsGroup;
 let flowMarkers = [];
 let flowTime = 0;
-let settlingParticles = null;
-let weirCascadesGroup = null;
-let troughFlowParticles = null;
 let vizMode = 'relave'; // 'agua' (clarificador) | 'relave' (espesador minero) — modo por defecto
 let sectionView = false; // true = vista en corte (cuña removida, como un molde de torta)
 let currentDiameter = 0;
@@ -959,15 +966,15 @@ function getConcreteBaseTexture(){
   canvas.width = size; canvas.height = size;
   const ctx = canvas.getContext('2d');
 
-  // Tono base de hormigón (mate y menos reflectivo)
-  ctx.fillStyle = '#94928A';
+  // Tono base de hormigón
+  ctx.fillStyle = '#B7B5AC';
   ctx.fillRect(0, 0, size, size);
 
   // Grano fino (ruido) típico del hormigón
   const imgData = ctx.getImageData(0, 0, size, size);
   const px = imgData.data;
   for(let i = 0; i < px.length; i += 4){
-    const n = (Math.random() - 0.5) * 24;
+    const n = (Math.random() - 0.5) * 30;
     px[i]   = Math.min(255, Math.max(0, px[i]   + n));
     px[i+1] = Math.min(255, Math.max(0, px[i+1] + n));
     px[i+2] = Math.min(255, Math.max(0, px[i+2] + n));
@@ -979,7 +986,7 @@ function getConcreteBaseTexture(){
     const x = Math.random() * size, y = Math.random() * size;
     const rad = 18 + Math.random() * 55;
     const grad = ctx.createRadialGradient(x, y, 0, x, y, rad);
-    const shade = Math.random() < 0.5 ? 'rgba(55,53,48,0.14)' : 'rgba(175,173,165,0.08)';
+    const shade = Math.random() < 0.5 ? 'rgba(80,78,72,0.12)' : 'rgba(235,233,225,0.12)';
     grad.addColorStop(0, shade);
     grad.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = grad;
@@ -989,7 +996,7 @@ function getConcreteBaseTexture(){
   }
 
   // Juntas de encofrado (paneles típicos del hormigón vaciado in situ)
-  ctx.strokeStyle = 'rgba(50,48,43,0.30)';
+  ctx.strokeStyle = 'rgba(65,63,58,0.35)';
   ctx.lineWidth = 2;
   for(let px2 = size/4; px2 < size; px2 += size/4){
     ctx.beginPath(); ctx.moveTo(px2, 0); ctx.lineTo(px2, size); ctx.stroke();
@@ -1042,13 +1049,13 @@ const REF_RANGES = {
     sorMin: 16, sorMax: 32,
     wlrMin: 80, wlrMax: 250,
     slrMin: 96, slrMax: 140,
-    source: '<strong>Fuente:</strong> Metcalf &amp; Eddy / Tchobanoglous, G. et al. (2014). <em>Wastewater Engineering: Treatment and Resource Recovery</em>, 5.ª ed. McGraw-Hill. Rangos de SOR y SLR para sedimentación secundaria posterior a lodos activados convencionales, a caudal medio. El rango de WLR es una compilación de referencias complementarias (WEF, Manual of Practice N.º 8).'
+    source: '<strong>Fuente:</strong> Metcalf &amp; Eddy / Tchobanoglous, G. et al. (2014). <em>Wastewater Engineering: Treatment and Resource Recovery</em>, 5.ª ed. McGraw-Hill. Rangos de SOR y SLR para sedimentación secundaria posterior a lodos activados convencionales, a caudal medio. El rango de WLR es una compilación de referencias complementarias (WEF, Manual of Practice N.º 8). Enlaces de verificación abiertos en «Limitaciones del modelo → Fuentes y enlaces».'
   },
   relave: {
     sorMin: 4, sorMax: 15,
     wlrMin: 40, wlrMax: 150,
     slrMin: 150, slrMax: 350,
-    source: '<strong>Fuente:</strong> Compilación orientativa a partir de Wills\' Mineral Processing Technology (Wills &amp; Finch, 2016) y prácticas típicas de diseño de espesadores convencionales de relaves. Los rangos son referenciales: el diseño real de un espesador de relaves depende de ensayos de sedimentación (Coe-Clevenger / Kynch) específicos para cada mineral.'
+    source: '<strong>Fuente:</strong> Compilación orientativa a partir de Wills\' Mineral Processing Technology (Wills &amp; Finch, 2016) y prácticas típicas de diseño de espesadores convencionales de relaves. Los rangos son referenciales: el diseño real de un espesador de relaves depende de ensayos de sedimentación (Coe-Clevenger / Kynch) específicos para cada mineral. Enlaces de verificación abiertos en «Limitaciones del modelo → Fuentes y enlaces».'
   }
 };
 
@@ -1065,18 +1072,11 @@ function applyRefRanges(mode){
 }
 
 function waterColor(){ return vizMode==='relave' ? 0xA9713A : 0x2E6E8E; }
-function troughColor(){ return waterColor(); }
-function waterOpacity(){ return vizMode==='relave' ? 0.85 : 0.45; }
+function troughColor(){ return vizMode==='relave' ? 0xC1854A : 0x3A8DB5; }
+function waterOpacity(){ return vizMode==='relave' ? 0.95 : 0.45; }
 function inletColor(){ return vizMode==='relave' ? 0x8B5A2B : 0x014898; }
 function sludgeColor(){ return vizMode==='relave' ? 0xA0522D : 0x8B4513; }
 function outletColor(){ return 0x2E8B57; }
-
-function settlingParticleColor(){
-  // Tono con máximo brillo y contraste para destacar intensamente
-  // Modo relave: Amarillo dorado brillante fluorescente (#FFD000) que resalta sobre el agua ámbar oscuro y el manto café
-  // Modo agua: Verde menta luminoso (#52F5A6) sobre el agua azul
-  return vizMode==='relave' ? 0xFFD000 : 0x52F5A6;
-}
 
 // Manto de sólidos (lodo activado / relave sedimentado) dentro del estanque
 function blanketColor(){ return vizMode==='relave' ? 0x6B4423 : 0x5C6F63; }
@@ -1143,9 +1143,9 @@ function initScene3D(){
   renderer3d.setPixelRatio(window.devicePixelRatio);
   container.appendChild(renderer3d.domElement);
 
-  const hemi = new THREE.HemisphereLight(0xf4f6f5, 0x5a6863, 0.85);
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x6b7a75, 0.95);
   scene3d.add(hemi);
-  const dir = new THREE.DirectionalLight(0xfffdfa, 0.55);
+  const dir = new THREE.DirectionalLight(0xffffff, 0.65);
   dir.position.set(12, 20, 8);
   scene3d.add(dir);
 
@@ -1265,103 +1265,24 @@ function pointAlongPath(points, t){
 function animate3D(){
   requestAnimationFrame(animate3D);
 
-  const scraperSpeed = (vizMode === 'agua') ? 0.008 : 0.0022;
-  if(scraperGroup){
-    // Giro del barredor en sentido positivo (+Y)
+if(scraperGroup){
+
+    // Velocidad de giro según el modo de operación
+    const scraperSpeed =
+        (vizMode === 'agua')
+            ? 0.008      // Clarificador
+            : 0.0022;    // Espesador
+
     scraperGroup.rotation.y += scraperSpeed;
-  }
-  flowTime += 0.006;
 
-  // Actualización de partículas de sedimentación
-  // Giran en la MISMA DIRECCIÓN (+Y) del barredor mientras van descendiendo
-  if(settlingParticles && settlingParticles.geometry.attributes.position){
-    const posAttr = settlingParticles.geometry.attributes.position;
-    const positions = posAttr.array;
-    const speeds = settlingParticles.userData.speeds;
-    const startRadii = settlingParticles.userData.radii;
-    const targetRadii = settlingParticles.userData.targetRadii;
-    const initialAngles = settlingParticles.userData.angles;
-    const topY = settlingParticles.userData.topY;
-    const bottomY = settlingParticles.userData.bottomY;
-    const num = positions.length / 3;
+}
+flowTime += 0.006;
 
-    // Velocidad angular sincronizada en la misma dirección que el barredor
-    const swirlSpeed = (vizMode === 'agua') ? 0.006 : 0.0025;
-    const hopperH = settlingParticles.userData.hopperH;
-    const rInt = settlingParticles.userData.rInt;
-    const hopperRBotInt = settlingParticles.userData.hopperRBotInt;
+flowMarkers.forEach(m=>{
 
-    for(let i = 0; i < num; i++){
-      const idx = i * 3;
-      // Descenso gravitacional
-      positions[idx + 1] -= speeds[i];
-
-      // Expansión y gradiente radial a medida que decanta por los niveles
-      const curY = positions[idx + 1];
-      const progress = Math.max(0, Math.min(1, (topY - curY) / (topY - bottomY)));
-      const rawR = startRadii[i] + progress * (targetRadii[i] - startRadii[i]);
-
-      // Límite cónico estricto: en la tolva el radio máximo decrece linealmente hacia el fondo
-      let maxAllowedR = rInt * 0.94;
-      if(curY < hopperH){
-        const coneFrac = Math.max(0, curY / hopperH);
-        maxAllowedR = (hopperRBotInt + coneFrac * (rInt - hopperRBotInt)) * 0.93;
-      }
-      const curR = Math.min(maxAllowedR, rawR);
-      
-      // Giro en la misma dirección positiva (+Y) del barredor
-      const currentAngle = initialAngles[i] + flowTime * (swirlSpeed * 120);
-      positions[idx] = Math.sin(currentAngle) * curR;
-      positions[idx + 2] = Math.cos(currentAngle) * curR;
-
-      // Si llega al fondo (tolva/manto inferior), reiniciar arriba
-      if(positions[idx + 1] <= bottomY){
-        positions[idx + 1] = topY;
-      }
-    }
-    posAttr.needsUpdate = true;
-  }
-
-  // Animación del rebose sobre el vertedero (Chorros parabólicos de agua clarificada)
-  if(weirCascadesGroup && weirCascadesGroup.children.length){
-    weirCascadesGroup.children.forEach((c, i) => {
-      // Modulación de escala y brillo para simular flujo dinámico cayendo
-      const wave = Math.sin(flowTime * 14 + i * 0.4);
-      c.material.opacity = 0.70 + 0.25 * wave;
-      c.scale.set(1 + 0.08 * wave, 1, 1 + 0.05 * wave);
-    });
-  }
-   // Animación del agua acumulada fluyendo por la canaleta hacia la tubería efluente
-  if(troughFlowParticles && troughFlowParticles.geometry.attributes.position){
-    const posAttr = troughFlowParticles.geometry.attributes.position;
-    const positions = posAttr.array;
-    const angles = troughFlowParticles.userData.angles;
-    const radii = troughFlowParticles.userData.radii;
-    const speeds = troughFlowParticles.userData.speeds;
-    const yList = troughFlowParticles.userData.yList;
-    const thStart = troughFlowParticles.userData.thStart;
-    const thLength = troughFlowParticles.userData.thLength;
-    const num = positions.length / 3;
-
-    for(let i = 0; i < num; i++){
-      const idx = i * 3;
-      // Avance angular circular a lo largo de la canaleta perimetral
-      angles[i] += speeds[i];
-      if(angles[i] > thStart + thLength){
-        angles[i] = thStart;
-      }
-      const curA = angles[i];
-      const curR = radii[i];
-      positions[idx] = Math.sin(curA) * curR;
-      positions[idx + 1] = yList[i] + 0.005 * Math.sin(flowTime * 10 + i);
-      positions[idx + 2] = Math.cos(curA) * curR;
-    }
-    posAttr.needsUpdate = true;
-  }
-     
-  flowMarkers.forEach(m=>{
     // Factor global según el modo
-    const t = (flowTime * m.speed + m.phase) % 1;
+const t = (flowTime * m.speed + m.phase) % 1;
+
     const {pos, dir} = pointAlongPath(m.path, t);
     m.mesh.position.copy(pos);
     m.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir);
@@ -1443,155 +1364,58 @@ if(sectionView){
   });
 }
   
-  /*
-  ZONA DE AGUA CLARIFICADA Y MANTO DE LODO:
-  - Exactamente 2 fluidos/estratos visuales:
-    1. Capa superior de Agua Clarificada (color waterColor)
-    2. Capa inferior de Manto de Lodos (color blanketColor)
-  */
-  const waterSurfaceY = hopperH + wallH - 0.15;
-  const blanketH = wallH * blanketHeightFrac();
-  const blanketTopY = hopperH + blanketH;
-  const clarifiedWaterH = Math.max(0.05, waterSurfaceY - blanketTopY);
 
-  // 1. MATERIAL Y VOLUMEN DE AGUA CLARIFICADA
-  const waterMat = new THREE.MeshStandardMaterial({
-    color: waterColor(),
-    roughness: 0.2,
-    metalness: 0.05,
-    transparent: true,
-    opacity: waterOpacity(),
-    side: THREE.DoubleSide
-  });
-
-  // Tapa superior (superficie libre) del agua ajustada al radio interior exacto
-  const waterGeo = new THREE.CylinderGeometry(rInt*0.999, rInt*0.999, 0.02, 48, 1, false, th.start, th.length);
+const waterGeo = new THREE.CylinderGeometry(rInt*0.99, rInt*0.99, 0.06, 48, 1, false, th.start, th.length);
+  const waterMat = new THREE.MeshStandardMaterial({color:waterColor(), roughness:0.25, metalness:0.05, transparent:true, opacity:waterOpacity()});
   waterMesh = new THREE.Mesh(waterGeo, waterMat);
-  waterMesh.position.y = waterSurfaceY;
+  waterMesh.position.y = hopperH + wallH - 0.15;
   tankGroup.add(waterMesh);
 
-  // Caras de corte de agua clarificada en vista en corte
-  if(sectionView){
-    const angles = [th.start, th.start + th.length];
-    angles.forEach(angle => {
-      const waterCutGeo = new THREE.PlaneGeometry(rInt, clarifiedWaterH);
-      const waterCut = new THREE.Mesh(waterCutGeo, waterMat);
-      const midR = rInt / 2;
-      waterCut.position.set(
-        Math.sin(angle) * midR,
-        blanketTopY + clarifiedWaterH / 2,
-        Math.cos(angle) * midR
-      );
-      waterCut.rotation.y = angle + Math.PI / 2;
-      tankGroup.add(waterCut);
-    });
-  }
-
-  // 2. MATERIAL Y VOLUMEN DEL MANTO DE LODOS
+  /*
+  MANTO DE SÓLIDOS: capa de lodo/relave sedimentado que se acumula sobre la
+  tolva, por debajo de la lámina de agua clarificada. Su altura y opacidad
+  varían según el modo: en el espesador de relave el manto es alto y denso
+  (baja velocidad de sedimentación, alta concentración de sólidos); en el
+  clarificador de agua es una capa delgada de lodo biológico.
+  */
+  const blanketH = wallH * blanketHeightFrac();
+const blanketGeo = new THREE.CylinderGeometry(rInt*0.98, rInt*0.98, blanketH, 48, 1, true, th.start, th.length);
   const blanketMat = new THREE.MeshStandardMaterial({
     color: blanketColor(),
-    roughness: 0.92,
-    metalness: 0.02,
+    roughness: 0.9,
     transparent: true,
     opacity: blanketOpacity(),
     side: THREE.DoubleSide
   });
+  sludgeBlanketMesh = new THREE.Mesh(blanketGeo, blanketMat);
+  sludgeBlanketMesh.position.y = hopperH + blanketH/2;
+  tankGroup.add(sludgeBlanketMesh);
 
-  // Tapa superior del manto (interfase de separación ajustada a rInt)
-  const blanketTopGeo = new THREE.CylinderGeometry(rInt*0.999, rInt*0.999, 0.02, 48, 1, false, th.start, th.length);
+  /*
+  Tapa superior del manto: se usa un CylinderGeometry de altura mínima (igual
+  criterio que waterGeo) en lugar de un CircleGeometry rotado. CircleGeometry
+  parametriza su ángulo en el plano local XY y, al rotarlo para dejarlo
+  horizontal, su cuña quedaba desfasada 90° respecto del resto de las piezas
+  (muro, agua, tolva, vertedero), que usan CylinderGeometry: en vista en
+  corte esto hacía que la cuña removida del manto no coincidiera con la del
+  resto del estanque. Con CylinderGeometry el ángulo queda parametrizado
+  exactamente igual que en las demás piezas, por lo que el corte coincide.
+  */
+  const blanketTopGeo = new THREE.CylinderGeometry(rInt*0.98, rInt*0.98, 0.02, 48, 1, false, th.start, th.length);
   const blanketTop = new THREE.Mesh(blanketTopGeo, blanketMat);
-  blanketTop.position.y = blanketTopY;
+  blanketTop.position.y = hopperH + blanketH;
   tankGroup.add(blanketTop);
 
-  // Caras de corte del manto de lodos en sectionView (zona cilíndrica vertical + tolva cónica)
+  // Pendiente de la tolva: en el espesador de relave la tolva es más
+  // cónica/pronunciada (abertura inferior más angosta) para que la pasta
+  // espesada fluya hacia el centro; en el clarificador de agua la pendiente
+  // es más suave, típica de sedimentación de lodos biológicos.
   function hopperBottomFrac(){ return vizMode==='relave' ? 0.05 : 0.14; }
-  const hopperRBotInt = Math.max(0.18, rInt * hopperBottomFrac());
-
-  if(sectionView){
-    const angles = [th.start, th.start + th.length];
-    angles.forEach(angle => {
-      // Corte vertical en manto perfectamente ajustado al muro interior
-      const blanketCutGeo = new THREE.PlaneGeometry(rInt, blanketH);
-      const blanketCut = new THREE.Mesh(blanketCutGeo, blanketMat);
-      const midR = rInt / 2;
-      blanketCut.position.set(
-        Math.sin(angle) * midR,
-        hopperH + blanketH / 2,
-        Math.cos(angle) * midR
-      );
-      blanketCut.rotation.y = angle + Math.PI / 2;
-      tankGroup.add(blanketCut);
-
-      // Corte en cono de la tolva ajustado al borde de hormigón
-      const s = Math.sin(angle);
-      const c = Math.cos(angle);
-      const v0 = new THREE.Vector3(s * rInt, hopperH, c * rInt);
-      const v1 = new THREE.Vector3(0, hopperH, 0);
-      const v2 = new THREE.Vector3(0, 0, 0);
-      const v3 = new THREE.Vector3(s * hopperRBotInt, 0, c * hopperRBotInt);
-
-      const sludgeHopperCutGeo = new THREE.BufferGeometry().setFromPoints([v0, v1, v2, v0, v2, v3]);
-      sludgeHopperCutGeo.computeVertexNormals();
-      const sludgeHopperCut = new THREE.Mesh(sludgeHopperCutGeo, blanketMat);
-      tankGroup.add(sludgeHopperCut);
-    });
-  }
-  /*
-  TOLVA CÓNICA INFERIOR (con espesor estructural de hormigón):
-  - Cara exterior cónica (conecta con el muro exterior a cota y=hopperH).
-  - Cara interior cónica (conecta con el muro interior a cota y=hopperH).
-  - Anillo de fondo en el ápice (borde de descarga de lodos a cota y=0).
-  - Tapas laterales en vista en corte (sectionView) que cierran la sección cónica maciza.
-  */
-  const hopperThick = wallThick; // 0.18 m de espesor estructural
-  const hopperRTopExt = rExt;
-  const hopperRTopInt = rInt;
-  const hopperRBotExt = hopperRBotInt + hopperThick;
-
-  const hopperConcreteTex = concreteTexture(Math.max(4, Math.round(rExt * 2 * Math.PI / 3)), Math.max(1, Math.round(hopperH / 1.6)));
-  const hopperMat = new THREE.MeshStandardMaterial({
-    map: hopperConcreteTex,
-    color: 0xffffff,
-    side: THREE.DoubleSide,
-    roughness: 0.95,
-    metalness: 0.02
-  });
-
-  // A) Cara exterior de la tolva cónica
-  const hopperExtGeo = new THREE.CylinderGeometry(hopperRTopExt, hopperRBotExt, hopperH, 48, 1, true, th.start, th.length);
-  const hopperExt = new THREE.Mesh(hopperExtGeo, hopperMat);
-  hopperExt.position.y = hopperH / 2;
-  tankGroup.add(hopperExt);
-
-  // B) Cara interior de la tolva cónica
-  const hopperIntGeo = new THREE.CylinderGeometry(hopperRTopInt, hopperRBotInt, hopperH, 48, 1, true, th.start, th.length);
-  const hopperInt = new THREE.Mesh(hopperIntGeo, hopperMat);
-  hopperInt.position.y = hopperH / 2;
-  tankGroup.add(hopperInt);
-
-  // C) Anillo inferior del ápice (borde de descarga de lodos)
-  const hopperBottomRingGeo = new THREE.CylinderGeometry(hopperRBotExt, hopperRBotInt, 0.02, 48, 1, true, th.start, th.length);
-  const hopperBottomRing = new THREE.Mesh(hopperBottomRingGeo, hopperMat);
-  hopperBottomRing.position.y = 0.01;
-  tankGroup.add(hopperBottomRing);
-
-  // D) Tapas laterales para vista en corte (sección cónica maciza)
-  if(sectionView){
-    const angles = [th.start, th.start + th.length];
-    angles.forEach(angle => {
-      const s = Math.sin(angle);
-      const c = Math.cos(angle);
-      const v0 = new THREE.Vector3(s * hopperRTopExt, hopperH, c * hopperRTopExt);
-      const v1 = new THREE.Vector3(s * hopperRTopInt, hopperH, c * hopperRTopInt);
-      const v2 = new THREE.Vector3(s * hopperRBotInt, 0, c * hopperRBotInt);
-      const v3 = new THREE.Vector3(s * hopperRBotExt, 0, c * hopperRBotExt);
-
-      const cutGeo = new THREE.BufferGeometry().setFromPoints([v0, v1, v2, v0, v2, v3]);
-      cutGeo.computeVertexNormals();
-      const cutMesh = new THREE.Mesh(cutGeo, hopperMat);
-      tankGroup.add(cutMesh);
-    });
-  }
+  const hopperGeo = new THREE.CylinderGeometry(rInt, rInt*hopperBottomFrac(), hopperH, 48, 1, true, th.start, th.length);
+  const hopperMat = new THREE.MeshStandardMaterial({color:0x3F5751, side:THREE.DoubleSide, roughness:0.95});
+  const hopper = new THREE.Mesh(hopperGeo, hopperMat);
+  hopper.position.y = hopperH/2;
+  tankGroup.add(hopper);
 
   /*
   ESTRUCTURA DE SOPORTE (columnas de hormigón)
@@ -1670,84 +1494,14 @@ if(sectionView){
 
   tankGroup.add(baffleGroup);
 
-  /*
-  SISTEMA DE PARTÍCULAS DE SEDIMENTACIÓN (Destacadas y confinadas):
-  Partículas con máximo contraste y confinadas estrictamente dentro del cono interior
-  de la tolva para que NUNCA traspasen el muro de hormigón ni el fondo cónico.
-  */
-  const particleCount = 800;
-  const particlePositions = new Float32Array(particleCount * 3);
-  const particleSpeeds = new Float32Array(particleCount);
-  const particleRadii = new Float32Array(particleCount);
-  const particleTargetRadii = new Float32Array(particleCount);
-  const particleAngles = new Float32Array(particleCount);
-
-  const partTopY = hopperH + wallH - 0.20;  // Nivel superior bajo la superficie
-  const partBottomY = 0.15;                  // Por encima del ápice de descarga de la tolva
-
-  for(let i = 0; i < particleCount; i++){
-    const idx = i * 3;
-    // Distribución angular completa de 360° (0 a 2*PI) sin cortar en vista en corte
-    const pAngle = Math.random() * Math.PI * 2;
-    
-    // El radio inicial en la parte superior
-    const startR = baffleRadiusBottom * (0.35 + Math.random() * 0.85);
-    const targetR = startR + Math.random() * (rInt * 0.90 - startR);
-    const pY = partBottomY + Math.random() * (partTopY - partBottomY);
-
-    // Calcular radio interior exacto del estanque para la cota pY
-    let maxAllowedR = rInt * 0.94;
-    if(pY < hopperH){
-      const coneFrac = Math.max(0, pY / hopperH);
-      maxAllowedR = (hopperRBotInt + coneFrac * (rInt - hopperRBotInt)) * 0.93;
-    }
-
-    const progress = (partTopY - pY) / (partTopY - partBottomY);
-    const rawR = startR + progress * (targetR - startR);
-    const curR = Math.min(maxAllowedR, rawR);
-
-    particlePositions[idx] = Math.sin(pAngle) * curR;
-    particlePositions[idx + 1] = pY;
-    particlePositions[idx + 2] = Math.cos(pAngle) * curR;
-
-    particleSpeeds[i] = (vizMode === 'relave' ? 0.007 : 0.013) * (0.5 + Math.random() * 0.9);
-    particleRadii[i] = startR;
-    particleTargetRadii[i] = targetR;
-    particleAngles[i] = pAngle;
-  }
-
-  const particleGeo = new THREE.BufferGeometry();
-  particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
-  const particleMat = new THREE.PointsMaterial({
-    color: settlingParticleColor(),
-    size: vizMode === 'relave' ? 0.35 : 0.20,
-    transparent: true,
-    opacity: 1.0,
-    blending: THREE.NormalBlending
-  });
-
-  settlingParticles = new THREE.Points(particleGeo, particleMat);
-  settlingParticles.userData = {
-    speeds: particleSpeeds,
-    radii: particleRadii,
-    targetRadii: particleTargetRadii,
-    angles: particleAngles,
-    topY: partTopY,
-    bottomY: partBottomY,
-    hopperH: hopperH,
-    rInt: rInt,
-    hopperRBotInt: hopperRBotInt
-  };
-  tankGroup.add(settlingParticles);
-
 
   scraperGroup = new THREE.Group();
-  /*Factor de "robustez" del mecanismo de rastras: en modo relave los brazos y
-  el eje son más gruesos, ya que deben vencer la mayor resistencia de un
-  material espesado y denso.*/
+  // Factor de "robustez" del mecanismo de rastras: en modo relave los brazos y
+  // el eje son más gruesos, ya que deben vencer la mayor resistencia de un
+  // material espesado y denso.
   const bulk = vizMode==='relave' ? 1.6 : 1.0;
-  /* Color claro y con leve brillo metálico para que el barredor se distinga
-  con claridad en la zona inferior, sobre la tolva oscura y el manto de sólidos.*/
+  // Color claro y con leve brillo metálico para que el barredor se distinga
+  // con claridad en la zona inferior, sobre la tolva oscura y el manto de sólidos.
   const scraperMetalMat = new THREE.MeshStandardMaterial({color: 0xCBD4D8, metalness: 0.78, roughness: 0.22, emissive: 0x10181a, emissiveIntensity: 0.3});
 
   const axisHeight = wallH + hopperH * 0.8;
@@ -1756,8 +1510,8 @@ if(sectionView){
   centralAxis.position.y = hopperH * 0.3 + axisHeight / 2;
   scraperGroup.add(centralAxis);
 
-  /*Torre / caja de accionamiento: más grande y robusta en modo relave, ya
-  que el motorreductor debe entregar mayor torque para mover el relave espesado.*/
+  // Torre / caja de accionamiento: más grande y robusta en modo relave, ya
+  // que el motorreductor debe entregar mayor torque para mover el relave espesado.
   const towerMat = new THREE.MeshStandardMaterial({color: vizMode==='relave' ? 0x5B3A29 : 0x35424A, metalness: 0.55, roughness: 0.4});
   const towerH = 0.55 * bulk;
   const towerRTop = 0.15 * bulk;
@@ -1796,10 +1550,10 @@ if(sectionView){
 
   const weirGroup = new THREE.Group();
   const weirColor = statusColor(wlrStatusCls);
-  /* El vertedero es la pieza que cambia de color según el estado (WLR alto/bajo/ok).
-     En un sedimentador real está hecho de placas planas atornilladas, no de un
-     anillo curvo continuo — por eso aquí usamos pocas caras + flatShading +
-     aristas marcadas, para que se note la geometría plana y segmentada.*/
+  // El vertedero es la pieza que cambia de color según el estado (WLR alto/bajo/ok).
+  // En un sedimentador real está hecho de placas planas atornilladas, no de un
+  // anillo curvo continuo — por eso aquí usamos pocas caras + flatShading +
+  // aristas marcadas, para que se note la geometría plana y segmentada.
   const weirMat = new THREE.MeshStandardMaterial({color: weirColor, roughness: 0.4, side: THREE.DoubleSide, flatShading: true});
 
   const weirSegments = 48;
@@ -1815,8 +1569,8 @@ if(sectionView){
   weirGroup.add(weirWire);
 
      
-  /*En vista en corte, se omiten las muescas que caerían dentro de la cuña
-    removida (para no dejarlas "flotando" sobre el hueco).*/
+  // En vista en corte, se omiten las muescas que caerían dentro de la cuña
+  // removida (para no dejarlas "flotando" sobre el hueco).
      
   function angleInsideCut(angle){
     if(!sectionView) return false;
@@ -1824,244 +1578,40 @@ if(sectionView){
     return a > th.length;
   }
 
-  weirCascadesGroup = new THREE.Group();
-  // Mayor densidad de muescas triangulares perimetrales (144 para el círculo completo)
-  const numNotches = Math.round(144 * (th.length / (Math.PI * 2)));
-  const dAngle = th.length / numNotches;
-  const chordW = 2 * r * Math.sin(dAngle / 2); // Ancho tangencial de cada paso
-
-  // Dientes triangulares planos alineados tangencialmente a la circunferencia
-  const toothHalfW = chordW * 0.48; // Mitad del ancho para casi tocarse con el diente contiguo
-  const toothShape = new THREE.Shape();
-  toothShape.moveTo(-toothHalfW, 0);
-  toothShape.lineTo(0, 0.14);
-  toothShape.lineTo(toothHalfW, 0);
-  toothShape.closePath();
-  const toothGeo = new THREE.ShapeGeometry(toothShape);
-
-  // Lámina curva del chorro de agua que rebosa por la 'V' entre dientes
-  const cascadeCurve = new THREE.QuadraticBezierCurve3(
-    new THREE.Vector3(0, 0.005, 0),        // Garganta / Vértice inferior de la 'V' entre dientes
-    new THREE.Vector3(0, -0.04, 0.10),     // Curva parabólica hacia el exterior
-    new THREE.Vector3(0, -0.22, 0.20)     // Caída al canal colector
-  );
-  const cascadeGeo = new THREE.TubeGeometry(cascadeCurve, 10, 0.016, 8, false);
-  const cascadeMat = new THREE.MeshStandardMaterial({
-    color: vizMode==='relave' ? 0xE5C158 : 0x7BE4F5,
-    roughness: 0.1,
-    metalness: 0.2,
-    transparent: true,
-    opacity: 0.88,
-    side: THREE.DoubleSide
-  });
-
-  // 1. Colocar los dientes triangulares en las posiciones enteras 'i', alineados tangencialmente a la circunferencia
-  for(let i = 0; i <= numNotches; i++) {
-    const angle = th.start + i * dAngle;
-    const tooth = new THREE.Mesh(toothGeo, weirMat);
-    tooth.position.set(
-      Math.sin(angle) * (r * 0.998),
-      hopperH + wallH + 0.15,
-      Math.cos(angle) * (r * 0.998)
+  const numNotches = Math.round(72 * (th.length / (Math.PI * 2)));
+const notchGeo = new THREE.ConeGeometry(0.08, 0.2, 3);
+for(let i = 0; i <= numNotches; i++) {
+  const angle = th.start + (i / numNotches) * th.length;
+  const notch = new THREE.Mesh(notchGeo, weirMat);
+  notch.position.set(
+    Math.sin(angle) * (r * 0.998),
+    hopperH + wallH + 0.2,
+    Math.cos(angle) * (r * 0.998)
     );
-    // Orientación tangencial plana: la normal del plano apunta radialmente hacia afuera
-    tooth.rotation.y = angle;
-    weirGroup.add(tooth);
+    weirGroup.add(notch);
   }
-
-  // 2. Colocar los chorros de agua en el ESPACIO INTERMEDIO (valles en 'V') entre cada dos dientes (i + 0.5)
-  for(let i = 0; i < numNotches; i++) {
-    const notchValleyAngle = th.start + (i + 0.5) * dAngle;
-    const cascade = new THREE.Mesh(cascadeGeo, cascadeMat.clone());
-    cascade.position.set(
-      Math.sin(notchValleyAngle) * (r * 1.002),
-      hopperH + wallH + 0.15,
-      Math.cos(notchValleyAngle) * (r * 1.002)
-    );
-    cascade.rotation.y = notchValleyAngle;
-    weirCascadesGroup.add(cascade);
-  }
-
-  weirGroup.add(weirCascadesGroup);
   tankGroup.add(weirGroup);
 
-  /*
-  CANALETA PERIMETRAL (con espesor estructural de hormigón):
-  - Pared exterior con espesor: cara exterior, cara interior y coronamiento superior.
-  - Losa de fondo con espesor: cara superior interior y cara inferior exterior.
-  - En vista en corte (sectionView): tapas laterales en los extremos del corte
-    para mostrar la sección transversal sólida en "U" de hormigón.
-  - Lámina de agua clarificada dentro del canal.
-  */
-  const troughChannelW = 0.45;        // Ancho libre del canal donde fluye el agua
-  const troughWallThick = 0.12;       // Espesor del muro exterior de la canaleta
-  const troughFloorThick = 0.10;      // Espesor de la losa de fondo de la canaleta
+  const troughWidth = 0.45;
+  const troughOuterR = r + troughWidth;
+  const troughConcreteMat = new THREE.MeshStandardMaterial({color: 0x9EAFA8, roughness: 0.8, side: THREE.DoubleSide});
+  const troughWaterMat = new THREE.MeshStandardMaterial({color: troughColor(), roughness: 0.2, transparent: true, opacity: 0.85});
 
-  const troughInnerR = rExt;
-  const troughChannelExtR = rExt + troughChannelW;
-  const troughOuterExtR = troughChannelExtR + troughWallThick;
+  const troughOuterWallGeo = new THREE.CylinderGeometry(troughOuterR, troughOuterR, 0.45, 48, 1, true, th.start, th.length);
+  const troughOuterWall = new THREE.Mesh(troughOuterWallGeo, troughConcreteMat);
+  troughOuterWall.position.y = hopperH + wallH + 0.025;
+  tankGroup.add(troughOuterWall);
 
-  const troughTopY = hopperH + wallH + 0.25;
-  const troughFloorTopY = hopperH + wallH - 0.20;
-  const troughFloorBottomY = troughFloorTopY - troughFloorThick;
-  const troughWallH = troughTopY - troughFloorBottomY;
+const troughFloorGeo = new THREE.CylinderGeometry(troughOuterR, r, 0.02, 48, 1, true, th.start, th.length);
+const troughFloor = new THREE.Mesh(troughFloorGeo, troughConcreteMat);
+troughFloor.position.y = hopperH + wallH - 0.2;
+tankGroup.add(troughFloor);
 
-  const troughConcreteTex = concreteTexture(Math.max(4, Math.round(troughOuterExtR * 2 * Math.PI / 3)), 1);
-  const troughConcreteMat = new THREE.MeshStandardMaterial({
-    map: troughConcreteTex,
-    color: 0xffffff,
-    roughness: 0.95,
-    metalness: 0.02,
-    side: THREE.DoubleSide
-  });
-  const troughWaterMat = new THREE.MeshStandardMaterial({
-    color: troughColor(),
-    roughness: 0.2,
-    transparent: true,
-    opacity: 0.85
-  });
+const troughWaterGeo = new THREE.CylinderGeometry(troughOuterR * 0.98, r * 1.002, 0.02, 48, 1, true, th.start, th.length);
+const troughWater = new THREE.Mesh(troughWaterGeo, troughWaterMat);
+troughWater.position.y = hopperH + wallH - 0.08;
+tankGroup.add(troughWater);
 
-  // A) Pared exterior de la canaleta - cara exterior
-  const troughWallExtGeo = new THREE.CylinderGeometry(troughOuterExtR, troughOuterExtR, troughWallH, 48, 1, true, th.start, th.length);
-  const troughWallExt = new THREE.Mesh(troughWallExtGeo, troughConcreteMat);
-  troughWallExt.position.y = (troughTopY + troughFloorBottomY) / 2;
-  tankGroup.add(troughWallExt);
-
-  // B) Pared exterior de la canaleta - cara interior
-  const troughWallIntH = troughTopY - troughFloorTopY;
-  const troughWallIntGeo = new THREE.CylinderGeometry(troughChannelExtR, troughChannelExtR, troughWallIntH, 48, 1, true, th.start, th.length);
-  const troughWallInt = new THREE.Mesh(troughWallIntGeo, troughConcreteMat);
-  troughWallInt.position.y = (troughTopY + troughFloorTopY) / 2;
-  tankGroup.add(troughWallInt);
-
-  // C) Coronamiento superior del muro de la canaleta
-  const troughWallTopGeo = new THREE.CylinderGeometry(troughOuterExtR, troughChannelExtR, 0.02, 48, 1, true, th.start, th.length);
-  const troughWallTop = new THREE.Mesh(troughWallTopGeo, troughConcreteMat);
-  troughWallTop.position.y = troughTopY;
-  tankGroup.add(troughWallTop);
-
-  // D) Fondo de la canaleta - cara superior (piso interior)
-  const troughFloorTopGeo = new THREE.CylinderGeometry(troughChannelExtR, troughInnerR, 0.02, 48, 1, true, th.start, th.length);
-  const troughFloorTop = new THREE.Mesh(troughFloorTopGeo, troughConcreteMat);
-  troughFloorTop.position.y = troughFloorTopY;
-  tankGroup.add(troughFloorTop);
-
-  // E) Fondo de la canaleta - cara inferior (voladizo exterior)
-  const troughFloorBottomGeo = new THREE.CylinderGeometry(troughOuterExtR, troughInnerR, 0.02, 48, 1, true, th.start, th.length);
-  const troughFloorBottom = new THREE.Mesh(troughFloorBottomGeo, troughConcreteMat);
-  troughFloorBottom.position.y = troughFloorBottomY;
-  tankGroup.add(troughFloorBottom);
-
-  // F) Tapas laterales para vista en corte (sección en "U" sólida)
-  if(sectionView){
-    const angles = [th.start, th.start + th.length];
-    angles.forEach(angle => {
-      // Tapa del muro exterior de la canaleta
-      const wallCutGeo = new THREE.PlaneGeometry(troughWallThick, troughWallIntH);
-      const wallCut = new THREE.Mesh(wallCutGeo, troughConcreteMat);
-      const midRWall = (troughOuterExtR + troughChannelExtR) / 2;
-      wallCut.position.set(
-        Math.sin(angle) * midRWall,
-        (troughTopY + troughFloorTopY) / 2,
-        Math.cos(angle) * midRWall
-      );
-      wallCut.rotation.y = angle + Math.PI / 2;
-      tankGroup.add(wallCut);
-
-      // Tapa de la losa de fondo de la canaleta
-      const floorCutW = troughOuterExtR - troughInnerR;
-      const floorCutGeo = new THREE.PlaneGeometry(floorCutW, troughFloorThick);
-      const floorCut = new THREE.Mesh(floorCutGeo, troughConcreteMat);
-      const midRFloor = (troughOuterExtR + troughInnerR) / 2;
-      floorCut.position.set(
-        Math.sin(angle) * midRFloor,
-        (troughFloorTopY + troughFloorBottomY) / 2,
-        Math.cos(angle) * midRFloor
-      );
-      floorCut.rotation.y = angle + Math.PI / 2;
-      tankGroup.add(floorCut);
-    });
-  }
-
-  // G) Volumen de agua clarificada acumulada dentro de la canaleta
-  const troughWaterLevelY = hopperH + wallH - 0.05; // Nivel de llenado del agua en el canal
-  const troughWaterDepth = troughWaterLevelY - troughFloorTopY; // Altura acumulada de líquido (~0.15 m)
-  const troughWaterMidR = (troughChannelExtR + troughInnerR) / 2;
-  const troughWaterWidth = troughChannelExtR - troughInnerR;
-
-  const troughWaterGeo = new THREE.CylinderGeometry(
-    troughChannelExtR * 0.998,
-    troughInnerR * 1.002,
-    troughWaterDepth,
-    48, 1, false, th.start, th.length
-  );
-  const troughWater = new THREE.Mesh(troughWaterGeo, troughWaterMat);
-  troughWater.position.y = troughFloorTopY + troughWaterDepth / 2;
-  tankGroup.add(troughWater);
-
-  // En vista en corte: tapas de agua en los extremos del canal
-  if(sectionView){
-    const angles = [th.start, th.start + th.length];
-    angles.forEach(angle => {
-      const waterEndCutGeo = new THREE.PlaneGeometry(troughWaterWidth * 0.98, troughWaterDepth * 0.98);
-      const waterEndCut = new THREE.Mesh(waterEndCutGeo, troughWaterMat);
-      waterEndCut.position.set(
-        Math.sin(angle) * troughWaterMidR,
-        troughFloorTopY + troughWaterDepth / 2,
-        Math.cos(angle) * troughWaterMidR
-      );
-      waterEndCut.rotation.y = angle + Math.PI / 2;
-      tankGroup.add(waterEndCut);
-    });
-  }
-
-  // H) Partículas y trazadores de corriente dentro del agua de la canaleta
-  const troughPCount = 180;
-  const troughPPos = new Float32Array(troughPCount * 3);
-  const troughPAngles = new Float32Array(troughPCount);
-  const troughPRadii = new Float32Array(troughPCount);
-  const troughPSpeeds = new Float32Array(troughPCount);
-  const troughPY = new Float32Array(troughPCount);
-
-  for(let i = 0; i < troughPCount; i++){
-    const idx = i * 3;
-    const a = th.start + Math.random() * th.length;
-    const rT = troughInnerR + 0.05 + Math.random() * (troughWaterWidth - 0.10);
-    const yT = troughFloorTopY + 0.02 + Math.random() * (troughWaterDepth - 0.04);
-
-    troughPPos[idx] = Math.sin(a) * rT;
-    troughPPos[idx + 1] = yT;
-    troughPPos[idx + 2] = Math.cos(a) * rT;
-
-    troughPAngles[i] = a;
-    troughPRadii[i] = rT;
-    troughPY[i] = yT;
-    troughPSpeeds[i] = (vizMode === 'relave' ? 0.008 : 0.018) * (0.8 + Math.random() * 0.4);
-  }
-
-  const troughPGeo = new THREE.BufferGeometry();
-  troughPGeo.setAttribute('position', new THREE.BufferAttribute(troughPPos, 3));
-  const troughPMat = new THREE.PointsMaterial({
-    color: vizMode === 'relave' ? 0xFFE082 : 0x80F0FF,
-    size: 0.18,
-    transparent: true,
-    opacity: 0.95,
-    blending: THREE.NormalBlending
-  });
-  troughFlowParticles = new THREE.Points(troughPGeo, troughPMat);
-  troughFlowParticles.userData = {
-    angles: troughPAngles,
-    radii: troughPRadii,
-    speeds: troughPSpeeds,
-    yList: troughPY,
-    thStart: th.start,
-    thLength: th.length
-  };
-  tankGroup.add(troughFlowParticles);
-
-
-
-     
   /*
   Tubería de salida (efluente): usa exactamente el mismo material y radio
   que la tubería de entrada (pipeMat, radio 0.2 — el mismo diámetro que las
@@ -2075,7 +1625,7 @@ if(sectionView){
   const effluentPipeGeo = new THREE.CylinderGeometry(0.2, 0.2, effluentPipeLen, 16);
   const effluentPipe = new THREE.Mesh(effluentPipeGeo, pipeMat);
   effluentPipe.rotation.z = Math.PI / 2;
-  effluentPipe.position.set(-(troughOuterExtR + effluentPipeLen / 2), hopperH + wallH - 0.08, 0);
+  effluentPipe.position.set(-(troughOuterR + effluentPipeLen / 2), hopperH + wallH - 0.08, 0);
   tankGroup.add(effluentPipe);
 
   const pipeY = hopperH + wallH + 1.5;
@@ -2158,7 +1708,6 @@ function drawFlowArrows(D){
   flowMarkers = [];
 
 
-
   /*
   Escala y geometría del modelo (deben coincidir con drawTank3D):
   r = D*9/20
@@ -2177,7 +1726,7 @@ function drawFlowArrows(D){
   const pipeY = y0 + hopperH + wallH + 1.5;          // codo del alimentador
   const vertPipeBottom = y0 + hopperH + wallH*0.6;    // extremo inferior del bajante
   const troughY = y0 + hopperH + wallH - 0.08;        // nivel de agua en canal perimetral
-  const troughOuterR = r + 0.45 + 0.12;                 //ancho canal (0.45) + espesor muro(0.12)
+  const troughOuterR = r + 0.45;                 // borde exterior del canal perimetral
 
 // =====================================================
 // Velocidades según modo de operación
@@ -2300,7 +1849,7 @@ function calc(){
 
   drawPlan(D, wlrSt.cls);
 }
- 
+
 function downloadSourceCode() {
   const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
   const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
