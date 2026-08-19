@@ -1443,8 +1443,6 @@ if(sectionView){
   });
 }
   
-  
-
   /*
   ZONA DE AGUA CLARIFICADA Y MANTO DE LODO:
   - Exactamente 2 fluidos/estratos visuales:
@@ -1744,12 +1742,12 @@ if(sectionView){
 
 
   scraperGroup = new THREE.Group();
-  // Factor de "robustez" del mecanismo de rastras: en modo relave los brazos y
-  // el eje son más gruesos, ya que deben vencer la mayor resistencia de un
-  // material espesado y denso.
+  /*Factor de "robustez" del mecanismo de rastras: en modo relave los brazos y
+  el eje son más gruesos, ya que deben vencer la mayor resistencia de un
+  material espesado y denso.*/
   const bulk = vizMode==='relave' ? 1.6 : 1.0;
-  // Color claro y con leve brillo metálico para que el barredor se distinga
-  // con claridad en la zona inferior, sobre la tolva oscura y el manto de sólidos.
+  /* Color claro y con leve brillo metálico para que el barredor se distinga
+  con claridad en la zona inferior, sobre la tolva oscura y el manto de sólidos.*/
   const scraperMetalMat = new THREE.MeshStandardMaterial({color: 0xCBD4D8, metalness: 0.78, roughness: 0.22, emissive: 0x10181a, emissiveIntensity: 0.3});
 
   const axisHeight = wallH + hopperH * 0.8;
@@ -1758,8 +1756,8 @@ if(sectionView){
   centralAxis.position.y = hopperH * 0.3 + axisHeight / 2;
   scraperGroup.add(centralAxis);
 
-  // Torre / caja de accionamiento: más grande y robusta en modo relave, ya
-  // que el motorreductor debe entregar mayor torque para mover el relave espesado.
+  /*Torre / caja de accionamiento: más grande y robusta en modo relave, ya
+  que el motorreductor debe entregar mayor torque para mover el relave espesado.*/
   const towerMat = new THREE.MeshStandardMaterial({color: vizMode==='relave' ? 0x5B3A29 : 0x35424A, metalness: 0.55, roughness: 0.4});
   const towerH = 0.55 * bulk;
   const towerRTop = 0.15 * bulk;
@@ -1798,10 +1796,10 @@ if(sectionView){
 
   const weirGroup = new THREE.Group();
   const weirColor = statusColor(wlrStatusCls);
-  // El vertedero es la pieza que cambia de color según el estado (WLR alto/bajo/ok).
-  // En un sedimentador real está hecho de placas planas atornilladas, no de un
-  // anillo curvo continuo — por eso aquí usamos pocas caras + flatShading +
-  // aristas marcadas, para que se note la geometría plana y segmentada.
+  /* El vertedero es la pieza que cambia de color según el estado (WLR alto/bajo/ok).
+     En un sedimentador real está hecho de placas planas atornilladas, no de un
+     anillo curvo continuo — por eso aquí usamos pocas caras + flatShading +
+     aristas marcadas, para que se note la geometría plana y segmentada.*/
   const weirMat = new THREE.MeshStandardMaterial({color: weirColor, roughness: 0.4, side: THREE.DoubleSide, flatShading: true});
 
   const weirSegments = 48;
@@ -1817,8 +1815,8 @@ if(sectionView){
   weirGroup.add(weirWire);
 
      
-  // En vista en corte, se omiten las muescas que caerían dentro de la cuña
-  // removida (para no dejarlas "flotando" sobre el hueco).
+  /*En vista en corte, se omiten las muescas que caerían dentro de la cuña
+    removida (para no dejarlas "flotando" sobre el hueco).*/
      
   function angleInsideCut(angle){
     if(!sectionView) return false;
@@ -2302,7 +2300,7 @@ function calc(){
 
   drawPlan(D, wlrSt.cls);
 }
-
+ 
 function downloadSourceCode() {
   const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
   const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
