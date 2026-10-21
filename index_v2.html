@@ -495,7 +495,11 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .sed-frac span:last-child{padding:.13em .22em 0}
 .sed-eq-eval{display:flex;flex-direction:column;align-items:flex-end;gap:4px;text-align:right;min-width:0;font-variant-numeric:tabular-nums}
 .sed-substitution{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
-.sed-result{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;color:var(--water-dark);overflow-wrap:anywhere}
+.sed-result{display:flex;align-items:baseline;justify-content:flex-end;gap:7px;flex-wrap:wrap;color:var(--water-dark)}
+.sed-result-number{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.sed-result-unit{display:inline-flex;align-items:center;white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;color:var(--muted);background:#eef4f6;border:1px solid #dce7eb;border-radius:5px;padding:3px 6px;line-height:1.3}
+.sed-result-unit sup{font-size:.72em;line-height:0;position:relative;top:-.1em}
+@media(max-width:450px){.sed-result{justify-content:flex-start}}
 @media(max-width:450px){.sed-eq-row{grid-template-columns:1fr}.sed-eq-eval{align-items:flex-start;text-align:left}}
 
 /* Panel principal: visualizar, configurar, interpretar y calcular */
@@ -926,7 +930,7 @@ function updateBar(prefix, val, min, max){
   document.getElementById(prefix+'MaxLbl').textContent = fmt(max,0);
 }
 
-let scene3d, camera3d, renderer3d, controls3d, tankGroup, weirMesh, waterMesh, scraperGroup, sludgeBlanketMesh;
+let scene3d, camera3d, renderer3d, controls3d, tankGroup, weirMesh, waterMesh, scraperGroup, sludgeBlanketMesh, sludgeTransportGroup;
 let currentWlrStatusCls = 'status-ok';
 let flowArrowsGroup;
 let flowMarkers = [];
@@ -947,7 +951,8 @@ const componentInfo = {
  scraper:['Rastras','Desplazan los sólidos depositados hacia la descarga central.'],
  sludge:['Descarga inferior','Permite retirar los lodos o el relave espesado.'],
  walkway:['Pasarela de acceso','Permite acceder al sector central para inspección y mantenimiento.'],
- baffle:['Deflector central (campana de alimentación)','Ayuda a distribuir la suspensión que ingresa y a reducir perturbaciones en la zona de sedimentación.']
+ baffle:['Deflector central (campana de alimentación)','Ayuda a distribuir la suspensión que ingresa y a reducir perturbaciones en la zona de sedimentación.'],
+ drive:['Motorreductor de rastras','Accionamiento mecánico que transmite un giro lento al sistema de rastras.']
 };
 function toggleVizLayer(layer){
  vizLayers[layer] = !vizLayers[layer];
@@ -958,6 +963,7 @@ function toggleVizLayer(layer){
  if(troughFlowParticles) troughFlowParticles.visible=vizLayers.flow;
  if(flowArrowsGroup) flowArrowsGroup.visible=vizLayers.flow;
  if(scraperGroup) scraperGroup.visible=vizLayers.scraper;
+ if(sludgeTransportGroup) sludgeTransportGroup.visible=vizLayers.scraper;
 }
 function syncVizScenario(){
  const Q=Math.max(0,Number(q.value)||0), C=Math.max(0,Number(c.value)||0);
@@ -984,7 +990,8 @@ function addComponentHotspots(r,hopperH,wallH,effluentX){
   ['scraper',...radial(r*0.56,hopperH+0.30)], // brazo de rastra sobre la tolva
   ['sludge',1.15,-1.15,0],                   // tubería horizontal de descarga inferior
   ['walkway',0,rimY+0.65,r*0.70],            // tablero de pasarela (eje z)
-  ['baffle',r*0.25,rimY-wallH*0.32,0]        // pared lateral del deflector troncocónico
+  ['baffle',r*0.25,rimY-wallH*0.32,0],       // pared lateral del deflector troncocónico
+  ['drive',0,rimY+1.30,-1.20]               // motorreductor sobre pasarela, separado del alimentador
  ];
  locations.forEach(([key,x,yy,z],i)=>{
   const dot=new THREE.Mesh(new THREE.SphereGeometry(.16,14,10),new THREE.MeshBasicMaterial({color:0xffdf85,depthTest:false}));
@@ -1337,6 +1344,18 @@ function animate3D(){
     // Giro del barredor en sentido positivo (+Y)
     scraperGroup.rotation.y += vizLayers.scraper ? scraperSpeed : 0;
   }
+  // Desplazamiento gradual de trazadores hacia la purga central, ligado
+  // al giro de las rastras y detenido cuando se ocultan estas.
+  if(sludgeTransportGroup && vizLayers.scraper){
+    const maxR=Math.max(3.2,currentDiameter*9/20-0.18)*0.83;
+    sludgeTransportGroup.children.forEach(g=>{
+      g.userData.radial-=g.userData.speed;
+      if(g.userData.radial<0.30)g.userData.radial=maxR*0.95;
+      g.userData.angle+=scraperSpeed*0.35;
+      const rad=g.userData.radial;
+      g.position.set(Math.cos(g.userData.angle)*rad,0.20+rad/(maxR/0.83)*(2.4-0.20)+0.065,Math.sin(g.userData.angle)*rad);
+    });
+  }
   flowTime += 0.006 * vizFlowScale;
 
   // Actualización de partículas de sedimentación
@@ -1433,7 +1452,9 @@ function animate3D(){
     m.mesh.position.copy(pos);
     m.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir);
     const fade = t < 0.08 ? t/0.08 : (t > 0.92 ? (1-t)/0.08 : 1);
-    m.mesh.material.opacity = 0.15 + 0.85*fade;
+    // La flecha es un THREE.Group: la opacidad corresponde a sus dos mallas.
+    const alpha = 0.25 + 0.75*fade;
+    m.mesh.children.forEach(part => { if(part.material) part.material.opacity = alpha; });
   });
 
   if(controls3d) controls3d.update();
@@ -1644,6 +1665,19 @@ if(sectionView){
   hopperBottomRing.position.y = 0.01;
   tankGroup.add(hopperBottomRing);
 
+  // Boca de captacion: aro metalico y garganta oscura, visibles en corte.
+  // No se tapa el conducto central ni se altera la pendiente de la tolva.
+  const throatMetal = new THREE.MeshStandardMaterial({color:0x536875,metalness:0.65,roughness:0.38,side:THREE.DoubleSide});
+  const throatDark = new THREE.MeshStandardMaterial({color:0x293942,metalness:0.22,roughness:0.78,side:THREE.DoubleSide});
+  const throatLip = new THREE.Mesh(new THREE.TorusGeometry(hopperRBotInt+0.025,0.045,9,48,th.length),throatMetal);
+  throatLip.rotation.x=Math.PI/2;
+  throatLip.rotation.z=th.start;
+  throatLip.position.y=0.055;
+  tankGroup.add(throatLip);
+  const throatSleeve = new THREE.Mesh(new THREE.CylinderGeometry(hopperRBotInt*0.97,hopperRBotInt*0.97,0.32,48,1,true,th.start,th.length),throatDark);
+  throatSleeve.position.y=-0.12;
+  tankGroup.add(throatSleeve);
+
   // D) Tapas laterales para vista en corte (sección cónica maciza)
   if(sectionView){
     const angles = [th.start, th.start + th.length];
@@ -1836,30 +1870,70 @@ if(sectionView){
   driveTower.position.y = axisTopY + towerH/2;
   scraperGroup.add(driveTower);
 
-  const targetR = r * 0.72;
-  const slopeAngle = Math.atan2(hopperH * 0.85, targetR);
-  const armLen = Math.sqrt(Math.pow(targetR, 2) + Math.pow(hopperH * 0.85, 2));
-
-  [-1, 1].forEach(direction => {
-    const armGeo = new THREE.BoxGeometry(armLen, 0.06*bulk, 0.07*bulk);
-    const arm = new THREE.Mesh(armGeo, scraperMetalMat);
-    
-    arm.position.set(direction * (targetR / 2), hopperH * 0.52, 0);
-    arm.rotation.z = direction * slopeAngle;
+  // Brazos radiales siguiendo la pendiente de la tolva, con travesaños y
+  // paletas metalicas oblicuas que representan el barrido hacia el centro.
+  // Se conserva libre el pozo de alimentación y su deflector superior.
+  const targetR = rInt * 0.83;
+  const bladeMat = new THREE.MeshStandardMaterial({color:0xE1B967,metalness:0.55,roughness:0.42});
+  const bracingMat = new THREE.MeshStandardMaterial({color:0x718994,metalness:0.62,roughness:0.4});
+  const rakeFloor = radius => 0.20 + (radius / rInt) * (hopperH - 0.20);
+  const armAngle = Math.atan2(rakeFloor(targetR)-rakeFloor(0),targetR);
+  const armLen = Math.hypot(targetR,rakeFloor(targetR)-rakeFloor(0));
+  [-1,1].forEach(direction => {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(armLen,0.095*bulk,0.095*bulk),scraperMetalMat);
+    arm.position.set(direction*targetR/2,(rakeFloor(0)+rakeFloor(targetR))/2+0.30,0);
+    arm.rotation.z = direction*armAngle;
     scraperGroup.add(arm);
-
-    const numBlades = 6;
-    for(let i = 1; i <= numBlades; i++) {
-      const bladeGeo = new THREE.BoxGeometry(0.045*bulk, 0.17*bulk, 0.07*bulk);
-      const blade = new THREE.Mesh(bladeGeo, scraperMetalMat);
-      const frac = i / (numBlades + 1);
-      const bx = direction * (targetR * frac);
-      const by = (hopperH * 0.12) + (frac * hopperH * 0.8);
-      blade.position.set(bx, by, 0);
-      blade.rotation.z = direction * slopeAngle;
-      scraperGroup.add(blade);
+    // Refuerzo inclinado que une el eje con la mitad del brazo.
+    const strutStart=new THREE.Vector3(0,hopperH+0.20,0);
+    const strutEnd=new THREE.Vector3(direction*targetR*0.63,rakeFloor(targetR*0.63)+0.34,0);
+    const strutDelta=new THREE.Vector3().subVectors(strutEnd,strutStart);
+    const strut=new THREE.Mesh(new THREE.CylinderGeometry(0.035*bulk,0.035*bulk,strutDelta.length(),8),bracingMat);
+    strut.position.copy(strutStart).add(strutEnd).multiplyScalar(0.5);
+    strut.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),strutDelta.normalize());
+    scraperGroup.add(strut);
+    // Paletas reales de barrido: chapas delgadas y oblicuas, no tacos macizos.
+    // La inclinacion en planta genera una componente de arrastre hacia el centro.
+    // La inclinacion vertical acompana la pendiente del fondo con una holgura.
+    for(let i=1;i<=8;i++){
+      const radial=targetR*(i/9);
+      const bladeAssembly=new THREE.Group();
+      bladeAssembly.position.set(direction*radial,rakeFloor(radial)+0.155,0);
+      // Chapa rectangular: espesor pequeno, ancho tangencial y altura visible.
+      const plate=new THREE.Mesh(
+        new THREE.BoxGeometry(0.34*bulk,0.19*bulk,0.024*bulk),
+        bladeMat
+      );
+      // Girada en planta para barrer el lodo radialmente durante la rotacion.
+      bladeAssembly.rotation.y=direction*0.52;
+      bladeAssembly.rotation.z=direction*armAngle;
+      plate.position.y=-0.008;
+      bladeAssembly.add(plate);
+      // Perfil de refuerzo trasero, fino y separado del borde de barrido.
+      const rib=new THREE.Mesh(
+        new THREE.BoxGeometry(0.025*bulk,0.145*bulk,0.035*bulk),
+        bracingMat
+      );
+      rib.position.set(0,0.025,-0.025*bulk);
+      bladeAssembly.add(rib);
+      scraperGroup.add(bladeAssembly);
     }
   });
+
+  // Granos cercanos al fondo: trazadores ilustrativos del barrido radial.
+  // Su recorrido NO representa velocidad ni rendimiento real de sedimentación.
+  sludgeTransportGroup = new THREE.Group();
+  const sedimentMat = new THREE.MeshStandardMaterial({color:vizMode==='relave'?0xA87950:0x826343,roughness:0.94});
+  const grainGeo=new THREE.SphereGeometry(0.043,6,5);
+  for(let i=0;i<76;i++){
+    const grain=new THREE.Mesh(grainGeo,sedimentMat);
+    const radial=0.45+(i%19)/19*(targetR-0.65);
+    const angle=i*2.399963;
+    grain.userData={radial,angle,speed:0.0016+(i%5)*0.00030};
+    grain.position.set(Math.cos(angle)*radial,rakeFloor(radial)+0.065,Math.sin(angle)*radial);
+    sludgeTransportGroup.add(grain);
+  }
+  tankGroup.add(sludgeTransportGroup);
 
   tankGroup.add(scraperGroup);
 
@@ -2135,10 +2209,10 @@ if(sectionView){
   transparente único, sin un "núcleo" de líquido opaco aparte (el flujo se
   representa con las flechas animadas, igual que en la entrada).
   */
-  const pipeMat = new THREE.MeshStandardMaterial({color:0x3E6E8A, roughness:0.4, metalness:0.15, transparent:true, opacity:0.32, depthWrite:false});
+  const pipeMat = new THREE.MeshStandardMaterial({color:0x3E6E8A, roughness:0.4, metalness:0.15, transparent:true, opacity:0.28, depthWrite:false, side:THREE.DoubleSide});
 
   const effluentPipeLen = 1.6;
-  const effluentPipeGeo = new THREE.CylinderGeometry(0.2, 0.2, effluentPipeLen, 16);
+  const effluentPipeGeo = new THREE.CylinderGeometry(0.2, 0.2, effluentPipeLen, 24);
   const effluentPipe = new THREE.Mesh(effluentPipeGeo, pipeMat);
   effluentPipe.rotation.z = Math.PI / 2;
   effluentPipe.position.set(-(troughOuterExtR + effluentPipeLen / 2), hopperH + wallH - 0.08, 0);
@@ -2146,7 +2220,7 @@ if(sectionView){
 
   const pipeY = hopperH + wallH + 1.5;
 
-  const horizPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, r*1.6, 20), pipeMat);
+  const horizPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, r*1.6, 24), pipeMat);
   horizPipe.rotation.z = Math.PI/2;
   horizPipe.position.set(r*0.8, pipeY, 0);
   tankGroup.add(horizPipe);
@@ -2156,46 +2230,133 @@ if(sectionView){
   tankGroup.add(elbow);
 
   const dropLen = pipeY - (hopperH + wallH*0.6);
-  const vertPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, dropLen, 20), pipeMat);
+  const vertPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, dropLen, 24), pipeMat);
   vertPipe.position.set(0, pipeY - dropLen/2, 0);
   tankGroup.add(vertPipe);
 
+  // Purga inferior: tuberia de lodos con boquilla, bridas, codo y valvula.
+  // Se conserva el mismo recorrido de las flechas animadas de descarga.
   const sludgeDropLen = 1.15;
   const sludgeElbowY = -sludgeDropLen;
   const sludgeRunLen = 2.3;
-
-  const sludgeDrop = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, sludgeDropLen, 16), pipeMat);
-  sludgeDrop.position.set(0, -sludgeDropLen/2, 0);
+  const sludgeRadius = 0.15;
+  const sludgePipeMat = new THREE.MeshStandardMaterial({color:0x667a83,metalness:0.35,roughness:0.35,transparent:true,opacity:0.27,depthWrite:false,side:THREE.DoubleSide});
+  const flangeMat = new THREE.MeshStandardMaterial({color:0x41535d,metalness:0.68,roughness:0.32});
+  const valveMat = new THREE.MeshStandardMaterial({color:0x35566a,metalness:0.48,roughness:0.4});
+  const sludgeDrop = new THREE.Mesh(new THREE.CylinderGeometry(sludgeRadius,sludgeRadius,sludgeDropLen,24),sludgePipeMat);
+  sludgeDrop.position.set(0,-sludgeDropLen/2,0);
   tankGroup.add(sludgeDrop);
-
-  const sludgeElbow = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), pipeMat);
-  sludgeElbow.position.set(0, sludgeElbowY, 0);
+  const sludgeElbow = new THREE.Mesh(new THREE.SphereGeometry(sludgeRadius,20,16),sludgePipeMat);
+  sludgeElbow.position.set(0,sludgeElbowY,0);
   tankGroup.add(sludgeElbow);
-
-  const sludgeRun = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, sludgeRunLen, 16), pipeMat);
-  sludgeRun.rotation.z = Math.PI/2;
-  sludgeRun.position.set(sludgeRunLen/2, sludgeElbowY, 0);
+  const sludgeRun = new THREE.Mesh(new THREE.CylinderGeometry(sludgeRadius,sludgeRadius,sludgeRunLen,24),sludgePipeMat);
+  sludgeRun.rotation.z=Math.PI/2;
+  sludgeRun.position.set(sludgeRunLen/2,sludgeElbowY,0);
   tankGroup.add(sludgeRun);
 
+  // Bridas de conexion de la boquilla y de la linea horizontal.
+  function addSludgeFlange(x,y,horizontal){
+    const f=new THREE.Mesh(new THREE.CylinderGeometry(0.205,0.205,0.065,24),flangeMat);
+    if(horizontal) f.rotation.z=Math.PI/2;
+    f.position.set(x,y,0);
+    tankGroup.add(f);
+  }
+  addSludgeFlange(0,-0.08,false);
+  addSludgeFlange(0,-0.30,false);
+  addSludgeFlange(0.42,sludgeElbowY,true);
+  addSludgeFlange(2.23,sludgeElbowY,true);
+
+  // Valvula de aislamiento en la descarga, con cuerpo y volante de maniobra.
+  const valveX=1.52;
+  const valveBody=new THREE.Mesh(new THREE.SphereGeometry(0.235,20,14),valveMat);
+  valveBody.scale.set(1.0,0.82,0.82);
+  valveBody.position.set(valveX,sludgeElbowY,0);
+  tankGroup.add(valveBody);
+  addSludgeFlange(valveX-0.25,sludgeElbowY,true);
+  addSludgeFlange(valveX+0.25,sludgeElbowY,true);
+  const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,0.32,12),flangeMat);
+  stem.position.set(valveX,sludgeElbowY+0.33,0);
+  tankGroup.add(stem);
+  const wheel=new THREE.Mesh(new THREE.TorusGeometry(0.19,0.025,8,28),new THREE.MeshStandardMaterial({color:0xb57638,metalness:0.65,roughness:0.35}));
+  wheel.rotation.x=Math.PI/2;
+  wheel.position.set(valveX,sludgeElbowY+0.52,0);
+  tankGroup.add(wheel);
+  const wheelCross=new THREE.Mesh(new THREE.BoxGeometry(0.36,0.025,0.025),flangeMat);
+  wheelCross.position.copy(wheel.position);
+  tankGroup.add(wheelCross);
+  const wheelCross2=new THREE.Mesh(new THREE.BoxGeometry(0.025,0.025,0.36),flangeMat);
+  wheelCross2.position.copy(wheel.position);
+  tankGroup.add(wheelCross2);
+
+  // Pasarela industrial de acero: tablero antideslizante, largueros,
+  // barandas con montantes y travesanos, y soportes inferiores.
+  // Se conserva la orientacion sobre el eje Z y el espacio libre en el centro
+  // para no interferir con el alimentador (+X), el motorreductor ni el operario.
   const walkY = hopperH + wallH + 0.65;
-  const walkMat = new THREE.MeshStandardMaterial({color:0x8A8176, roughness:0.85});
-  const deckGeo = new THREE.BoxGeometry(0.9, 0.12, r*2 + 1.2);
-  const deck = new THREE.Mesh(deckGeo, walkMat);
-  deck.position.set(0, walkY, 0);
-  tankGroup.add(deck);
-
-  const railMat = new THREE.MeshStandardMaterial({color:0x6A7C77, roughness:0.6});
+  const walkLen = r*2 + 1.2;
+  const walkWidth = 0.90;
+  const walkMat = new THREE.MeshStandardMaterial({color:0x737F84, metalness:0.56, roughness:0.58});
+  const gratingMat = new THREE.MeshStandardMaterial({color:0x9CA7A9, metalness:0.52, roughness:0.72});
+  const railMat = new THREE.MeshStandardMaterial({color:0xD3AC43, metalness:0.38, roughness:0.54});
+  const walkSupportMat = new THREE.MeshStandardMaterial({color:0x586A71, metalness:0.48, roughness:0.60});
+  function walkwayPart(geo,mat,x,y,z){
+    const mesh=new THREE.Mesh(geo,mat);
+    mesh.position.set(x,y,z);
+    tankGroup.add(mesh);
+    return mesh;
+  }
+  // Plataforma y dos perfiles longitudinales bajo el tablero.
+  walkwayPart(new THREE.BoxGeometry(walkWidth,0.085,walkLen),walkMat,0,walkY,0);
+  [-0.39,0.39].forEach(x=>{
+    walkwayPart(new THREE.BoxGeometry(0.085,0.21,walkLen),walkSupportMat,x,walkY-0.135,0);
+  });
+  // Franjas transversales que sugieren rejilla industrial antideslizante.
+  // Poco relieve para que el operario permanezca apoyado sobre la pasarela.
+  const grateSpacing=0.25;
+  for(let z=-walkLen/2+0.14;z<walkLen/2-0.10;z+=grateSpacing){
+    walkwayPart(new THREE.BoxGeometry(walkWidth-0.11,0.012,0.025),gratingMat,0,walkY+0.049,z);
+  }
+  // Barandas laterales: postes verticales, pasamanos superior y travesano
+  // intermedio. El centro queda libre para la entrada y el accionamiento.
+  const railHeight=0.98;
   [-1,1].forEach(side=>{
-    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.5, r*2 + 1.2), railMat);
-    rail.position.set(side*0.42, walkY + 0.31, 0);
-    tankGroup.add(rail);
+    const x=side*(walkWidth/2-0.035);
+    walkwayPart(new THREE.BoxGeometry(0.055,0.055,walkLen),railMat,x,walkY+railHeight,0);
+    walkwayPart(new THREE.BoxGeometry(0.04,0.04,walkLen),railMat,x,walkY+0.52,0);
+    walkwayPart(new THREE.BoxGeometry(0.038,0.15,walkLen),walkSupportMat,x,walkY+0.12,0);
+    const postSpacing=1.65;
+    const postCount=Math.ceil(walkLen/postSpacing);
+    for(let i=0;i<=postCount;i++){
+      const z=-walkLen/2+0.10+(walkLen-0.20)*i/postCount;
+      walkwayPart(new THREE.BoxGeometry(0.055,railHeight,0.055),railMat,x,walkY+railHeight/2,z);
+    }
   });
+  // Pasarela sin columnas verticales añadidas: el tablero y sus perfiles
+  // longitudinales se mantienen; no se interfiere con el pozo de alimentación.
 
-  [-(r), 0, r].forEach(zpos=>{
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, walkY - (hopperH+wallH*0.4), 10), walkMat);
-    leg.position.set(0, (hopperH+wallH*0.4 + walkY)/2, zpos);
-    tankGroup.add(leg);
-  });
+  // Motorreductor estacionario de las rastras. Situado hacia el lado -Z de
+  // la pasarela, separado de la alimentacion central (tuberia en +X a y=7.1).
+  // No se integra en scraperGroup: la carcasa permanece fija mientras giran las rastras.
+  const driveGroup = new THREE.Group();
+  const driveSteel = new THREE.MeshStandardMaterial({color:0x53636C,metalness:0.66,roughness:0.36});
+  const driveBlue = new THREE.MeshStandardMaterial({color:0x336D82,metalness:0.55,roughness:0.38});
+  const driveDark = new THREE.MeshStandardMaterial({color:0x303C43,metalness:0.7,roughness:0.3});
+  function drivePart(geometry,material,x,y,z){
+    const part=new THREE.Mesh(geometry,material);part.position.set(x,y,z);driveGroup.add(part);return part;
+  }
+  // Base de montaje sobre la pasarela, carcasa reductora y motor con aletas.
+  drivePart(new THREE.BoxGeometry(.72,.12,.86),driveSteel,0,.08,0);
+  drivePart(new THREE.BoxGeometry(.52,.43,.48),driveDark,0,.35,.12);
+  const motor=drivePart(new THREE.CylinderGeometry(.19,.19,.62,18),driveBlue,0,.42,-.40);
+  motor.rotation.x=Math.PI/2;
+  for(let j=0;j<5;j++){
+    drivePart(new THREE.BoxGeometry(.40,.025,.035),driveSteel,0,.42,-.64+j*.11);
+  }
+  drivePart(new THREE.CylinderGeometry(.13,.13,.09,16),driveSteel,0,.61,.12);
+  // Posicion al lado opuesto de la tuberia de entrada, sin tapar el pozo
+  // ni la campana de alimentacion; tampoco coincide con el operario (+Z).
+  driveGroup.position.set(0,walkY+.06,-1.20);
+  tankGroup.add(driveGroup);
 
   // Operario de referencia a escala, construido con geometrías Three.js.
   // Es un elemento ilustrativo: no interviene en los cálculos del sedimentador.
@@ -2240,9 +2401,23 @@ drawFlowArrows(D);
   syncVizScenario();
 }
 function makeFlowMarker(color){
-  const geo = new THREE.ConeGeometry(0.22, 0.55, 12);
-  const mat = new THREE.MeshStandardMaterial({color, transparent:true, opacity:1, roughness:0.35, emissive:color, emissiveIntensity:0.25});
-  return new THREE.Mesh(geo, mat);
+  // Flecha legible dentro de las tuberías transparentes: punta y asta.
+  // Radio máximo 0.12, menor que el radio de la tubería de lodos (0.15).
+  const marker = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({
+    color, transparent:true, opacity:1, roughness:0.24,
+    metalness:0.05, emissive:color, emissiveIntensity:0.62,
+    depthTest:false
+  });
+  const head = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.28, 16), mat);
+  head.position.y = 0.13;
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.27, 12), mat);
+  stem.position.y = -0.145;
+  marker.add(head, stem);
+  marker.renderOrder = 20;
+  head.renderOrder = 20;
+  stem.renderOrder = 20;
+  return marker;
 }
 
 function addFlowLine(path, color, speed, count){
@@ -2325,7 +2500,7 @@ addFlowLine(inletPath, inletColor(), inletSpeed, 5);
 
   const outletPath = [
     new THREE.Vector3(-(troughOuterR), troughY, 0),
-    new THREE.Vector3(-(troughOuterR + 2.0), troughY, 0)
+    new THREE.Vector3(-(troughOuterR + 1.6), troughY, 0)
   ];
  addFlowLine(outletPath, outletColor(), outletSpeed, 2);
 
@@ -2389,9 +2564,9 @@ function calc(){
   updateBar('slr', slr, slrMin, slrMax);
 
 
- document.getElementById('eqSor').innerHTML = `<span class="sed-substitution">${fmt(Q,0)} / ${fmt(area,1)}</span><span class="sed-result">${fmt(sor,1)} m³/m²·día</span>`;
- document.getElementById('eqWlr').innerHTML = `<span class="sed-substitution">${fmt(Q,0)} / ${fmt(perimeter,1)}</span><span class="sed-result">${fmt(wlr,1)} m³/m·día</span>`;
- document.getElementById('eqSlr').innerHTML = `<span class="sed-substitution">${fmt(Q,0)} × ${fmt(C/1000,2)} / ${fmt(area,1)}</span><span class="sed-result">${fmt(slr,1)} kg/m²·día</span>`;
+ document.getElementById('eqSor').innerHTML = `<span class="sed-substitution">${fmt(Q,0)} / ${fmt(area,1)}</span><span class="sed-result"><span class="sed-result-number">${fmt(sor,1)}</span><span class="sed-result-unit">m<sup>3</sup>/(m<sup>2</sup>·día)</span></span>`;
+ document.getElementById('eqWlr').innerHTML = `<span class="sed-substitution">${fmt(Q,0)} / ${fmt(perimeter,1)}</span><span class="sed-result"><span class="sed-result-number">${fmt(wlr,1)}</span><span class="sed-result-unit">m<sup>3</sup>/(m·día)</span></span>`;
+ document.getElementById('eqSlr').innerHTML = `<span class="sed-substitution">${fmt(Q,0)} × ${fmt(C/1000,2)} / ${fmt(area,1)}</span><span class="sed-result"><span class="sed-result-number">${fmt(slr,1)}</span><span class="sed-result-unit">kg/(m<sup>2</sup>·día)</span></span>`;
 
   drawPlan(D, wlrSt.cls);
   syncVizScenario();
@@ -2421,7 +2596,7 @@ function buildGuideContent(isRelave){
   const comoUsar = `Trabaja con el simulador abierto. Introduce los valores directamente en los campos numéricos del panel «Escenario» (no hay barras deslizantes). Modifica únicamente la variable indicada en cada ensayo, registra SOR, WLR y SLR, observa el modelo 3D y explica los resultados. Puedes verificar los cálculos con una calculadora. Los colores y el manto de sólidos son representaciones didácticas, no una predicción física de remoción o de altura real del lodo. Modo inicial: <strong>${isRelave ? 'espesador de relave' : 'clarificador de agua'}</strong>.`;
   const mode = isRelave ? {
     tituloProceso:'Espesador de Relaves Mineros', asignaturas:'Procesamiento de Minerales, Operaciones Unitarias y Gestión de Relaves',
-    objetivos:['Identificar el recorrido del fluido y la función de los componentes de un espesador circular.','Analizar cómo Q, D y SST modifican SOR, WLR y SLR.','Comparar indicadores y criterios de referencia entre clarificación de aguas y espesamiento de relaves.','Proponer y justificar alternativas de diseño reconociendo los límites del modelo.'],
+    objetivos:['Identificar los componentes y su función en un espesador circular.','Analizar cómo Q, D y SST modifican SOR, WLR y SLR.','Comparar indicadores y criterios de referencia entre clarificación de aguas y espesamiento de relaves.','Proponer y justificar alternativas de diseño reconociendo los límites del modelo.'],
     fuente:'Wills y Finch (2016), Wills’ Mineral Processing Technology (referencia general; los rangos del simulador deben verificarse para cada aplicación).'
   } : {
     tituloProceso:'Sedimentador Circular — Clarificador de Aguas Residuales', asignaturas:'Ingeniería Sanitaria, Tratamiento de Aguas y Operaciones Unitarias',
@@ -2431,9 +2606,9 @@ function buildGuideContent(isRelave){
   const act1 = isRelave ? {
     titulo:'Actividad 1 — Influencia del caudal en el espesador',
 
-    instruccion:'Selecciona «Espesador de relave». Ingresa D = 18 m y SST = 2.800 mg/L. Ensaya Q = 1.500, 2.000, 2.500, 3.000, 3.500, 4.000, 4.500, 5.000, 5.500 y 6.000 m³/día. Registra los resultados numéricos y el estado de SOR; observa la indicación visual del modelo.',
+    instruccion:'Selecciona «Espesador de relave». Ingresa D = 18 m y SST = 2.800 mg/L. Ensaya Q = 1.500, 2.500, 3.500, 4.000, 4.500 y 6.000 m³/día. Registra los resultados numéricos y el estado de SOR; observa la indicación visual del modelo.',
     tablaHeaders:['Q (m³/día)','SOR (m³/m²·día)','WLR (m³/m·día)','Estado SOR'],
-    valores:[1500,2000,2500,3000,3500,4000,4500,5000,5500,6000],
+    valores:[1500,2500,3500,4000,4500,6000],
     consigna:'Calcula el área del tanque y estima el caudal al que SOR supera su máximo de referencia. Explica por qué los valores de SOR y WLR crecen al aumentar Q.',
     notaDocente:'A = π(18²)/4 ≈ 254,47 m². Con SOR máx. de referencia = 15, Q umbral ≈ 3.817 m³/día. La clasificación del resultado depende de la comparación con el límite de referencia configurado.'
   } : {
@@ -2473,19 +2648,18 @@ function buildGuideContent(isRelave){
   };
   const act4 = isRelave ? {
     titulo:'Actividad 4 — Desafío de diseño: ampliación minera',
-
-    instruccion:'Una faena proyecta Q = 3.200 m³/día y SST = 3.000 mg/L. Trabaja en modo relave. Estima primero el diámetro mínimo para no superar SOR máx. = 15; comprueba el resultado en el simulador y revisa también WLR y SLR.',
-    consigna:'Determina un diámetro que cumpla el límite superior de SOR y comprueba qué sucede con los otros indicadores. ¿Es posible lograr que los tres estén simultáneamente en «ok» modificando solo D? Si no, demuestra por qué y propone qué información o cambios de modelo se necesitarían.',
-    notaDocente:'Para SOR≤15, D≥√(4·3200/(π·15))≈16,48 m. Pero SLR=SOR·3 kg/m³≤45 kg/m²·día, inferior al mínimo de referencia 150. Por tanto NO existe D que produzca simultáneamente tres estados «ok» con esos Q y SST. La tarea correcta es detectar esta incompatibilidad y no inventar un diámetro.'
+    instruccion:'Una faena proyecta Q = 3.200 m³/día y SST = 3.000 mg/L. Trabaja en modo relave y utiliza SOR máximo de referencia = 15 m³/(m²·día).',
+    pasos:['Calcula el área mínima requerida a partir de SOR = Q/A.','Calcula el diámetro mínimo correspondiente a un tanque circular.','Introduce el diámetro calculado en el simulador y registra SOR, WLR y SLR con sus unidades y estados.','Compara con D = 18 m e indica qué ocurre con las tres cargas al aumentar el diámetro.'],
+    consigna:'¿Cuál de los dos diámetros escogerías considerando el límite superior de SOR? Justifica tu respuesta con los valores calculados. No es necesario conseguir que todos los indicadores aparezcan en «ok».',
+    notaDocente:'A mínima = 3200/15 ≈ 213,33 m²; D mínimo = √(4·3200/(π·15)) ≈ 16,48 m. Con D = 18 m: SOR ≈ 12,58 m³/(m²·día), WLR ≈ 56,59 m³/(m·día), SLR ≈ 37,73 kg/(m²·día). Se espera que reconozcan que aumentar D reduce las tres cargas a Q y SST constantes. Los rangos «bajo/ok/alto» son referencias, no metas simultáneas obligatorias.'
   } : {
     titulo:'Actividad 4 — Desafío de diseño: ampliación de una PTAR',
-
-    instruccion:'Una PTAR proyecta Q = 7.500 m³/día y SST = 3.000 mg/L. Trabaja en modo agua. Estima primero el diámetro mínimo para no superar SOR máx. = 32; comprueba en el simulador y revisa WLR y SLR.',
-    consigna:'Calcula y verifica un diámetro que respete los límites superiores. Luego analiza si los tres indicadores pueden quedar simultáneamente en «ok» con los límites inferiores y superiores del simulador. Compara con D = 18 m y justifica las diferencias.',
-    notaDocente:'SOR≤32 exige D≥√(4·7500/(π·32))≈17,27 m. Como SLR=3·SOR y el mínimo SLR es 96, para «ok» se necesita SOR≥32; combinado con SOR≤32 solo hay igualdad exacta en D≈17,27 m. Con D=18 m, SOR≈29,47 (ok), WLR≈132,63 (ok), SLR≈88,42 (bajo). Explicar que «bajo» no significa necesariamente falla física.'
+    instruccion:'Una PTAR proyecta Q = 7.500 m³/día y SST = 3.000 mg/L. Trabaja en modo agua y utiliza SOR máximo de referencia = 32 m³/(m²·día).',
+    pasos:['Calcula el área mínima requerida a partir de SOR = Q/A.','Calcula el diámetro mínimo correspondiente a un tanque circular.','Introduce el diámetro calculado en el simulador y registra SOR, WLR y SLR con sus unidades y estados.','Compara con D = 18 m e indica qué ocurre con las tres cargas al aumentar el diámetro.'],
+    consigna:'¿Cuál de los dos diámetros escogerías considerando el límite superior de SOR? Justifica tu respuesta con los valores calculados. No es necesario conseguir que todos los indicadores aparezcan en «ok».',
+    notaDocente:'A mínima = 7500/32 ≈ 234,38 m²; D mínimo = √(4·7500/(π·32)) ≈ 17,27 m. Con D = 18 m: SOR ≈ 29,47 m³/(m²·día), WLR ≈ 132,63 m³/(m·día), SLR ≈ 88,42 kg/(m²·día). Se espera que comparen alternativas y reconozcan que «bajo» no equivale automáticamente a falla.'
   };
-  const reflexion='¿Qué decisiones de diseño pueden justificarse con SOR, WLR y SLR y cuáles requieren ensayos de sedimentación, caracterización de sólidos y datos operacionales? Considera las consecuencias ambientales y sociales de una decisión mal fundamentada.';
-  return {competencia,comoUsar,mode,act1,act2,act3,act4,reflexion,isRelave};
+  return {competencia,comoUsar,mode,act1,act2,act3,act4,isRelave};
 }
 
 /* ================================================================
@@ -2503,8 +2677,7 @@ function downloadTeacherGuide() {
     { criterio: 'RA1 — Sensibilidad hidráulica', insuf: 'No identifica el caudal donde ocurre sobrecarga, o los valores registrados no coinciden con el simulador.', sufic: 'Identifica el caudal de sobrecarga con apoyo, sin explicar la causa geométrica.', bueno: 'Identifica correctamente el caudal crítico y explica de forma parcial la relación entre área/perímetro.', excel: 'Identifica el caudal crítico con precisión y explica con claridad la razón geométrica de por qué SOR o WLR fallan primero.' },
     { criterio: 'RA2 — Interpretación SOR/WLR/SLR', insuf: 'Confunde el significado físico de los parámetros o no logra explicarlos.', sufic: 'Explica el significado de cada parámetro de forma básica, con imprecisiones.', bueno: 'Explica correctamente qué representa cada parámetro y menciona alguna consecuencia de excederlo.', excel: 'Explica con precisión el significado físico de los tres parámetros, su relación matemática y sus consecuencias operativas.' },
     { criterio: 'RA3 — Comparación agua/relave', insuf: 'No distingue valores calculados, estados de referencia y elementos visuales.', sufic: 'Reconoce cambios de estado sin explicar los rangos de referencia.', bueno: 'Explica que los valores calculados se conservan y que cambian los rangos de referencia.', excel: 'Compara valores y rangos, distingue visualización ilustrativa de cálculo y discute límites y fuentes.' },
-    { criterio: 'RA4 — Desafío de diseño', insuf: 'No realiza cálculos ni comprueba la factibilidad de las restricciones.', sufic: 'Ensaya un diámetro, pero no analiza todos los límites ni la factibilidad.', bueno: 'Calcula un diámetro y analiza SOR/WLR/SLR, reconociendo incompatibilidades si aparecen.', excel: 'Verifica matemáticamente la factibilidad de todos los límites, justifica la solución o imposibilidad y señala los datos adicionales necesarios.' },
-    { criterio: 'Reflexión final', insuf: 'No responde o la respuesta no aborda la pregunta planteada.', sufic: 'Responde de forma superficial, sin argumentar.', bueno: 'Responde con argumentos razonables, considerando al menos un aspecto técnico y uno ético/social.', excel: 'Responde con argumentación sólida, integrando aspectos técnicos, éticos y de responsabilidad profesional.' }
+    { criterio: 'RA4 — Desafío de diseño', insuf: 'No calcula área ni diámetro y no comprueba resultados.', sufic: 'Calcula el diámetro con apoyo y registra parcialmente los indicadores.', bueno: 'Calcula y comprueba el diámetro, compara con 18 m y justifica su elección.', excel: 'Calcula correctamente, registra unidades, compara ambas alternativas y fundamenta con claridad el efecto del diámetro.' },
   ];
   const rubricaHTML = rubricaRows.map(r => `
     <tr>
@@ -2520,6 +2693,7 @@ function downloadTeacherGuide() {
       <div style="font-size: 11px; margin-bottom: 12px; page-break-inside: avoid;">
         <strong>${a.titulo}</strong><br>
         <em>Procedimiento:</em> ${a.instruccion}<br>
+        ${a.pasos ? `<em>Pasos:</em> ${a.pasos.map((p,i)=>`${i+1}. ${p}`).join(" ")}<br>` : ""}
         <em>Análisis:</em> ${a.consigna}
         <div style="background:#FDF0D2; border-left:3px solid #F9B614; margin-top:5px; padding:5px 8px; font-size:9.5px; color:#5B4A00;">
           <strong>Nota para el docente:</strong> ${a.notaDocente}
@@ -2550,7 +2724,7 @@ function downloadTeacherGuide() {
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 10.5px; background: #F7FAF9; border: 1px solid #C6D3CE;">
         <tr>
           <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Asignaturas:</strong> ${c.mode.asignaturas}</td>
-          <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Duración estimada:</strong> 90–120 minutos.</td>
+          <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Duración estimada:</strong> 110–140 minutos (con introducción docente).</td>
         </tr>
         <tr>
           <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Modalidad:</strong> Individual o en parejas.</td>
@@ -2571,19 +2745,15 @@ function downloadTeacherGuide() {
       </div>
 
       <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 16px 0 8px 0;">3. Actividades Prácticas Guiadas</h2>
-      <div style="background:#F1F6F7;padding:9px 12px;font-size:10px;margin-bottom:12px;"><strong>Orientación docente:</strong> Comenzar identificando alimentación, vertedero y fondo en el modelo 3D. En cada actividad seguir «predecir → experimentar → registrar → calcular → explicar». Los estados «bajo/ok/alto» son comparaciones con rangos de referencia, no un diagnóstico integral de desempeño. La representación del manto es ilustrativa. Comprobar siempre la coherencia de unidades (SST/1000 en kg/m³).</div>
+      <div style="background:#F1F6F7;padding:9px 12px;font-size:10px;margin-bottom:12px;"><strong>Orientación docente:</strong> Comenzar identificando alimentación, vertedero y fondo en el modelo 3D. En cada actividad seguir «explorar → registrar → calcular → explicar». Los estados «bajo/ok/alto» son comparaciones con rangos de referencia, no un diagnóstico integral de desempeño. La representación del manto es ilustrativa. Comprobar siempre la coherencia de unidades (SST/1000 en kg/m³).</div>
       ${actividadDocenteHTML(c.act1)}
       ${actividadDocenteHTML(c.act2)}
       ${actividadDocenteHTML(c.act3)}
       ${actividadDocenteHTML(c.act4)}
-
-      <div style="font-size: 11px; margin-bottom: 10px; page-break-inside: avoid;">
-        <strong>Pregunta de reflexión final</strong><br>
-        <em style="color:#1B4B63;">${c.reflexion}</em>
-      </div>
+      <div style="background:#EDF5F7;padding:9px 12px;font-size:10px;margin:12px 0;page-break-inside:avoid;"><strong>Secuencia sugerida (110–140 min):</strong> introducción y uso del modelo 3D (10–15 min); reconocimiento inicial (10 min); actividad 1 (20–25 min); actividad 2 (15–20 min); actividad 3 (20–25 min); actividad 4 (25–30 min); revisión y cierre docente (10–15 min). La duración depende del manejo de unidades y cálculos previos del grupo.</div>
 
       <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 18px 0 8px 0; page-break-before: always; padding-top: 10px;">4. Rúbrica de Evaluación</h2>
-      <p style="font-size: 10px; color: #5B6B67; margin: 0 0 8px 0;">Escala: 1 = Insuficiente · 2 = Suficiente · 3 = Bueno · 4 = Excelente. Puntaje total sugerido: máx. 20 puntos.</p>
+      <p style="font-size: 10px; color: #5B6B67; margin: 0 0 8px 0;">Escala: 1 = Insuficiente · 2 = Suficiente · 3 = Bueno · 4 = Excelente. Puntaje total sugerido: máx. 16 puntos (4 criterios × 4 puntos).</p>
       <table style="width: 100%; border-collapse: collapse; font-size: 8.5px; table-layout: fixed;">
         <thead>
           <tr style="background: #1B4B63; color: #fff;">
@@ -2723,14 +2893,11 @@ function downloadStudentGuide() {
       <div style="page-break-before: always; padding-top:10px;"></div>
       <div style="font-size: 11px; margin-bottom: 6px;">
         <strong>${c.act4.titulo}</strong><br>
-        <strong>1. Calcula y verifica:</strong> ${c.act4.instruccion}
+        <strong>Situación:</strong> ${c.act4.instruccion}
       </div>
-      <p style="font-size:11px; margin:0 0 4px;"><strong>2. Justifica:</strong> ${c.act4.consigna}</p>
+      <ol style="font-size:10.5px;line-height:1.5;margin:0 0 8px;padding-left:22px;">${c.act4.pasos.map(p=>`<li>${p}</li>`).join("")}</ol>
+      <p style="font-size:11px; margin:0 0 4px;"><strong>Justifica tu elección:</strong> ${c.act4.consigna}</p>
       <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">${blankRows(1,6)}</table>
-
-      <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 16px 0 8px 0;">Pregunta de reflexión final</h2>
-      <p style="font-size:11px; font-style:italic; background:#FDF0D2; border-left:3px solid #F9B614; padding:8px 10px; margin:0 0 10px;">${c.reflexion}</p>
-      <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">${blankRows(1,8)}</table>
 
       <div style="margin-top: 20px; border-top: 1px solid #C6D3CE; padding-top: 6px; font-size: 9.5px; color: #5B6B67; text-align: center;">
         Recurso Educativo Abierto (REA) — Universidad del Bío-Bío · Licencia Creative Commons CC BY-SA 4.0.
