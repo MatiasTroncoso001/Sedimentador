@@ -547,6 +547,18 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
   hyphens: auto;
 }
 
+
+/* Ficha didactica de indicadores integrada al REA */
+.sed-concepts{margin:0 0 1.5rem}.sed-concepts-intro{font-size:14px;line-height:1.7;margin:.2rem 0 1rem}.sed-concepts-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.sed-concept{border:1px solid var(--line);border-radius:9px;padding:15px;background:#fff}.sed-concept h3{font-size:16px;margin:0 0 8px;color:var(--ink)}.sed-concept p{font-size:13.5px;line-height:1.65;margin:0 0 10px;text-align:justify}.sed-concept .sed-formula{font-weight:700;text-align:center;background:#f2f7f6;border-radius:6px;padding:9px 4px;margin-bottom:10px;font-size:16px}.sed-concept .sed-meaning{border-top:1px solid var(--line);padding-top:9px;margin:0}.sed-concepts-note{font-size:13px;line-height:1.65;margin:12px 0 0;color:var(--ink)}@media(max-width:800px){.sed-concepts-grid{grid-template-columns:1fr}}
+
+/* Resultados: valor numérico y unidad diferenciados visualmente. */
+.sed-dashboard-results .metric-top{align-items:center;gap:10px;}
+.sed-dashboard-results .metric-name{min-width:0;line-height:1.35;}
+.sed-dashboard-results .metric-reading{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;text-align:right;}
+.sed-dashboard-results .metric-value{font-size:18px;line-height:1.15;font-variant-numeric:tabular-nums;color:var(--water-dark);}
+.sed-dashboard-results .metric-unit{font-family:'IBM Plex Sans',sans-serif;font-size:11.5px;line-height:1.3;font-weight:500;color:var(--muted);white-space:nowrap;}
+@media(max-width:420px){.sed-dashboard-results .metric-top{flex-wrap:wrap;}.sed-dashboard-results .metric-reading{margin-left:auto;}}
+.sed-visual-tools{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 10px}.sed-visual-tools button{flex:1 1 135px;padding:8px 9px;border:1px solid var(--line);border-radius:7px;background:#edf6f3;color:var(--water-dark);font:600 12px 'IBM Plex Sans',sans-serif;cursor:pointer}.sed-visual-tools button[aria-pressed="false"]{background:#fff;color:var(--muted)}.sed-scene-wrap{position:relative;display:flex;justify-content:center;align-items:flex-start}.sed-component-info{position:absolute;z-index:5;top:12px;left:12px;max-width:min(235px,55%);width:max-content;box-sizing:border-box;padding:6px 9px;margin:0;background:rgba(247,251,249,.95);border:1px solid var(--line);border-radius:6px;font-size:11px;line-height:1.35;color:var(--ink);min-height:0;box-shadow:0 2px 8px rgba(0,0,0,.07);pointer-events:none;text-align:left}@media(max-width:560px){.sed-component-info{top:8px;left:8px;max-width:65%;font-size:10.5px;padding:5px 7px}}
 </style>
 <style>
 /* Encabezado institucional armonizado con el REA de Ciclo Rankine */
@@ -691,6 +703,29 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
 </div>
 <p class="hint" style="margin-top:.5rem;">Animación 3D de un espesador de alta velocidad ("high-rate thickener"), cortesía de Diemme Filtration. Es un equipo de mayor tecnología que el espesador convencional de este REA, pero permite reconocer las mismas partes constitutivas: pozo de alimentación central, vertedero perimetral, rastras de fondo y descarga de lodos.</p>
 </div>
+
+<section class="card accent-gold sed-concepts" id="comprender-indicadores" aria-labelledby="indicadores-titulo">
+<h2 id="indicadores-titulo">Comprendiendo los indicadores de diseño: SOR, WLR y SLR</h2>
+<p class="sed-concepts-intro">Antes de modificar el escenario, conoce qué mide cada indicador y qué representa físicamente dentro del sedimentador. Las tres cargas describen aspectos distintos del proceso.</p>
+<div class="sed-concepts-grid">
+<article class="sed-concept"><h3>SOR · Carga superficial</h3>
+<p>Relaciona el <strong>caudal de alimentación (Q)</strong> con el <strong>área superficial del tanque (A)</strong>. Indica cuántos metros cúbicos ingresan al día por cada metro cuadrado de superficie.</p>
+<div class="sed-formula">SOR = Q / A</div>
+<p><strong>Unidad:</strong> m³/(m²·día)</p>
+<p class="sed-meaning"><strong>¿Qué ocurre si aumenta Q?</strong> Si el diámetro no cambia, la superficie sigue siendo la misma y la SOR aumenta.</p></article>
+<article class="sed-concept"><h3>WLR · Carga sobre vertedero</h3>
+<p>Relaciona el <strong>caudal de salida (Q)</strong> con la <strong>longitud del vertedero (L)</strong>. Para un vertedero perimetral completo de diámetro D, L = πD.</p>
+<div class="sed-formula">WLR = Q / (πD)</div>
+<p><strong>Unidad:</strong> m³/(m·día)</p>
+<p class="sed-meaning"><strong>¿Qué ocurre si aumenta Q?</strong> Si el diámetro no cambia, cada metro de vertedero debe evacuar más caudal.</p></article>
+<article class="sed-concept"><h3>SLR · Carga de sólidos</h3>
+<p>Relaciona la <strong>masa de sólidos que ingresa por día</strong> con el <strong>área superficial (A)</strong>. Depende del caudal (Q) y de la concentración de sólidos (C).</p>
+<div class="sed-formula">SLR = (Q · C) / A</div>
+<p><strong>Unidad:</strong> kg/(m²·día), con C en kg/m³</p>
+<p class="sed-meaning"><strong>¿Qué ocurre si aumenta C?</strong> Si Q y D permanecen constantes, aumenta la SLR, mientras SOR y WLR no cambian.</p></article>
+</div>
+<p class="sed-concepts-note"><strong>Recuerda:</strong> SOR y WLR son indicadores de carga hidráulica; SLR expresa una carga másica de sólidos. No indican por sí solos el porcentaje de remoción ni predicen directamente la altura real del manto de lodos. En el panel <strong>Escenario</strong> puedes modificar Q, D y la concentración; observa los valores calculados en <strong>Resultados</strong> y sus fórmulas en <strong>Ecuaciones en vivo</strong>.</p>
+</section>
 <div class="sed-dashboard"><div class="sed-dashboard-top"><div class="card accent-plain sed-dashboard-model" style="">
 <h2>Modelo 3D <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);font-size:12px;">— arrastra para rotar, scroll para acercar</span></h2>
 <div aria-label="Selección de modo de proceso" role="group" style="display:flex;gap:.5rem;margin-bottom:.9rem;">
@@ -706,11 +741,17 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
             Vista en corte
           </button>
 </div>
-<div class="diagram-box">
+<div class="sed-visual-tools" role="group" aria-label="Capas visibles del modelo 3D">
+<button type="button" id="vizParticlesBtn" aria-pressed="true" onclick="toggleVizLayer('particles')">● Partículas: visibles</button>
+<button type="button" id="vizFlowBtn" aria-pressed="true" onclick="toggleVizLayer('flow')">➜ Flujo: visible</button>
+<button type="button" id="vizScraperBtn" aria-pressed="true" onclick="toggleVizLayer('scraper')">↻ Rastras: visibles</button>
+</div>
+<div class="diagram-box sed-scene-wrap">
+<div id="sed-component-info" class="sed-component-info" role="status" aria-live="polite">Selecciona un punto numerado del modelo para identificar su función.</div>
 <div aria-describedby="scene3d-help" aria-label="Modelo 3D rotable del sedimentador circular en modo espesador de relave. Es una visualización complementaria; los valores numéricos equivalentes están disponibles en el panel de Resultados." id="scene3d" role="img" style="width:100%;max-width:520px;height:340px;border-radius:8px;background:#DCE9E4;overflow:hidden;" tabindex="0"></div>
 </div>
 <p id="scene3d-help" style="font-size:12px;color:var(--muted);text-align:center;margin:.5rem 0 0;">
-          Para utilizar el modelo con teclado, selecciónelo y use las teclas de flecha para rotar y + o − para acercar o alejar.
+          Selecciona los puntos numerados para conocer los componentes. Con teclado, usa las flechas para rotar y + o − para acercar o alejar.
           </p>
 <div style="display:flex;flex-wrap:wrap;gap:.9rem;justify-content:center;margin-top:.8rem;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);">
 <span><span aria-hidden="true" id="legendInletDot" style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#014898;margin-right:5px;vertical-align:middle;"></span><span id="legendInlet">Entrada de alimentación</span></span>
@@ -755,7 +796,7 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
 <div class="metric">
 <div class="metric-top">
 <span class="metric-name">Carga superficial<small>SOR</small><span class="metric-status status-ok" id="sorStatus">—</span></span>
-<span class="metric-value" id="sorVal">—</span>
+<span class="metric-reading"><span class="metric-value" id="sorVal">—</span><span class="metric-unit">m³/(m²·día)</span></span>
 </div>
 <div class="bar-track"><div class="bar-range" id="sorRange"></div><div class="bar-fill" id="sorFill"></div></div>
 <div class="bar-labels"><span id="sorMinLbl">16</span><span id="sorMaxLbl">32</span></div>
@@ -763,7 +804,7 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
 <div class="metric">
 <div class="metric-top">
 <span class="metric-name">Carga sobre vertedero<small>WLR</small><span class="metric-status status-ok" id="wlrStatus">—</span></span>
-<span class="metric-value" id="wlrVal">—</span>
+<span class="metric-reading"><span class="metric-value" id="wlrVal">—</span><span class="metric-unit">m³/(m·día)</span></span>
 </div>
 <div class="bar-track"><div class="bar-range" id="wlrRange"></div><div class="bar-fill" id="wlrFill"></div></div>
 <div class="bar-labels"><span id="wlrMinLbl">80</span><span id="wlrMaxLbl">250</span></div>
@@ -771,7 +812,7 @@ cantidad de sólidos aplicada por unidad de área, relevante para evaluar capaci
 <div class="metric">
 <div class="metric-top">
 <span class="metric-name">Carga de sólidos<small>SLR</small><span class="metric-status status-ok" id="slrStatus">—</span></span>
-<span class="metric-value" id="slrVal">—</span>
+<span class="metric-reading"><span class="metric-value" id="slrVal">—</span><span class="metric-unit">kg/(m²·día)</span></span>
 </div>
 <div class="bar-track"><div class="bar-range" id="slrRange"></div><div class="bar-fill" id="slrFill"></div></div>
 <div class="bar-labels"><span id="slrMinLbl">96</span><span id="slrMaxLbl">140</span></div>
@@ -896,6 +937,76 @@ let troughFlowParticles = null;
 let vizMode = 'relave'; // 'agua' (clarificador) | 'relave' (espesador minero) — modo por defecto
 let sectionView = false; // true = vista en corte (cuña removida, como un molde de torta)
 let currentDiameter = 0;
+const vizLayers = {particles:true,flow:true,scraper:true};
+let vizFlowScale = 1, vizSolidsFraction = 1;
+let componentHotspots = [];
+const componentInfo = {
+ feed:['Pozo de alimentación','Recibe la suspensión y distribuye su entrada al tanque.'],
+ overflow:['Vertedero perimetral','Recoge el líquido clarificado o el agua recuperada.'],
+ effluent:['Salida de agua clarificada','Conduce el agua clarificada desde la canaleta perimetral hacia el exterior del sedimentador.'],
+ scraper:['Rastras','Desplazan los sólidos depositados hacia la descarga central.'],
+ sludge:['Descarga inferior','Permite retirar los lodos o el relave espesado.'],
+ walkway:['Pasarela de acceso','Permite acceder al sector central para inspección y mantenimiento.'],
+ baffle:['Deflector central (campana de alimentación)','Ayuda a distribuir la suspensión que ingresa y a reducir perturbaciones en la zona de sedimentación.']
+};
+function toggleVizLayer(layer){
+ vizLayers[layer] = !vizLayers[layer];
+ const ids={particles:'vizParticlesBtn',flow:'vizFlowBtn',scraper:'vizScraperBtn'};
+ const labels={particles:['● Partículas: visibles','○ Partículas: ocultas'],flow:['➜ Flujo: visible','➜ Flujo: oculto'],scraper:['↻ Rastras: visibles','↻ Rastras: ocultas']};
+ const b=document.getElementById(ids[layer]);b.setAttribute('aria-pressed',String(vizLayers[layer]));b.textContent=labels[layer][vizLayers[layer]?0:1];
+ if(settlingParticles) settlingParticles.visible=vizLayers.particles;
+ if(troughFlowParticles) troughFlowParticles.visible=vizLayers.flow;
+ if(flowArrowsGroup) flowArrowsGroup.visible=vizLayers.flow;
+ if(scraperGroup) scraperGroup.visible=vizLayers.scraper;
+}
+function syncVizScenario(){
+ const Q=Math.max(0,Number(q.value)||0), C=Math.max(0,Number(c.value)||0);
+ // Escala ilustrativa: no representa velocidades medidas ni eficiencia real.
+ vizFlowScale=Math.max(.35,Math.min(2.8,Q/4200));
+ vizSolidsFraction=Math.max(.12,Math.min(1,C/2800));
+ if(settlingParticles){
+  const n=settlingParticles.geometry.attributes.position.count;
+  settlingParticles.geometry.setDrawRange(0,Math.round(n*vizSolidsFraction));
+ }
+}
+function addComponentHotspots(r,hopperH,wallH,effluentX){
+ // Todas las posiciones son LOCALES a tankGroup (que ya se eleva TANK_STAND_H).
+ // Se usan las cotas reales de las piezas creadas en drawTank3D.
+ componentHotspots=[];
+ const rimY=hopperH+wallH;
+ const cutAngle=CUT_CENTER; // abertura frontal cuando está activa la vista en corte
+ const angle=sectionView ? cutAngle : Math.PI*0.25;
+ const radial=(radius,y)=>[Math.sin(angle)*radius,y,Math.cos(angle)*radius];
+ const locations=[
+  ['feed',0,rimY-0.55,0],                      // pozo central de alimentación
+  ['overflow',-(r+0.20),rimY-0.08,0],         // canaleta/vertedero exterior izquierdo
+  ['effluent',effluentX,rimY-0.08,0],         // tubería real de salida de agua clarificada
+  ['scraper',...radial(r*0.56,hopperH+0.30)], // brazo de rastra sobre la tolva
+  ['sludge',1.15,-1.15,0],                   // tubería horizontal de descarga inferior
+  ['walkway',0,rimY+0.65,r*0.70],            // tablero de pasarela (eje z)
+  ['baffle',r*0.25,rimY-wallH*0.32,0]        // pared lateral del deflector troncocónico
+ ];
+ locations.forEach(([key,x,yy,z],i)=>{
+  const dot=new THREE.Mesh(new THREE.SphereGeometry(.16,14,10),new THREE.MeshBasicMaterial({color:0xffdf85,depthTest:false}));
+  dot.position.set(x,yy,z);dot.renderOrder=100;dot.userData.componentKey=key;
+  tankGroup.add(dot);componentHotspots.push(dot);
+  const canvas=document.createElement('canvas');canvas.width=96;canvas.height=96;
+  const ctx=canvas.getContext('2d');ctx.fillStyle='#153d46';ctx.beginPath();ctx.arc(48,48,42,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 55px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(i+1),48,51);
+  const texture=new THREE.CanvasTexture(canvas);
+  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,depthTest:false}));
+  sprite.position.set(x,yy+.43,z);sprite.scale.set(.68,.68,1);sprite.renderOrder=101;
+  sprite.userData.componentKey=key;tankGroup.add(sprite);componentHotspots.push(sprite);
+ });
+}
+function pickComponent(event){
+ if(!camera3d||!renderer3d||!componentHotspots.length)return;
+ const rect=renderer3d.domElement.getBoundingClientRect();
+ const pointer=new THREE.Vector2(((event.clientX-rect.left)/rect.width)*2-1,-((event.clientY-rect.top)/rect.height)*2+1);
+ const ray=new THREE.Raycaster();ray.setFromCamera(pointer,camera3d);
+ const hits=ray.intersectObjects(componentHotspots,false);
+ if(hits.length){const entry=componentInfo[hits[0].object.userData.componentKey];document.getElementById('sed-component-info').textContent=entry[0]+': '+entry[1];}
+}
+
 
 // Altura de las columnas de hormigón que elevan el sedimentador sobre el
 // nivel del piso. Con esto la tolva y la tubería de descarga de lodos/relave
@@ -1119,6 +1230,9 @@ function initScene3D(){
   grid.position.y = -0.01;
   scene3d.add(grid);
 
+  let down=null;
+  renderer3d.domElement.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY};});
+  renderer3d.domElement.addEventListener('pointerup',e=>{if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)<6)pickComponent(e);down=null;});
   animate3D();
   window.addEventListener('resize', ()=>{
     const w2 = container.clientWidth, h2 = container.clientHeight;
@@ -1221,9 +1335,9 @@ function animate3D(){
   const scraperSpeed = (vizMode === 'agua') ? 0.008 : 0.0022;
   if(scraperGroup){
     // Giro del barredor en sentido positivo (+Y)
-    scraperGroup.rotation.y += scraperSpeed;
+    scraperGroup.rotation.y += vizLayers.scraper ? scraperSpeed : 0;
   }
-  flowTime += 0.006;
+  flowTime += 0.006 * vizFlowScale;
 
   // Actualización de partículas de sedimentación
   // Giran en la MISMA DIRECCIÓN (+Y) del barredor mientras van descendiendo
@@ -1247,7 +1361,7 @@ function animate3D(){
     for(let i = 0; i < num; i++){
       const idx = i * 3;
       // Descenso gravitacional
-      positions[idx + 1] -= speeds[i];
+      positions[idx + 1] -= speeds[i] * Math.sqrt(vizFlowScale);
 
       // Expansión y gradiente radial a medida que decanta por los niveles
       const curY = positions[idx + 1];
@@ -2083,8 +2197,47 @@ if(sectionView){
     tankGroup.add(leg);
   });
 
+  // Operario de referencia a escala, construido con geometrías Three.js.
+  // Es un elemento ilustrativo: no interviene en los cálculos del sedimentador.
+  const worker = new THREE.Group();
+  const workerSkin = new THREE.MeshStandardMaterial({color:0xC98D68,roughness:0.92});
+  const workerVest = new THREE.MeshStandardMaterial({color:0xF29A22,roughness:0.8});
+  const workerPants = new THREE.MeshStandardMaterial({color:0x34495E,roughness:0.9});
+  const workerHelmet = new THREE.MeshStandardMaterial({color:0xF5C842,roughness:0.65});
+  const workerBoot = new THREE.MeshStandardMaterial({color:0x30363B,roughness:0.95});
+  const workerReflect = new THREE.MeshStandardMaterial({color:0xF0F4DB,roughness:0.65});
+  function workerPart(geo,mat,x,y,z){
+    const mesh=new THREE.Mesh(geo,mat);
+    mesh.position.set(x,y,z);worker.add(mesh);return mesh;
+  }
+  // Altura aproximada 1,70 unidades; pies apoyados sobre el tablero.
+  [-0.13,0.13].forEach(x=>{
+    workerPart(new THREE.CylinderGeometry(0.09,0.105,0.59,10),workerPants,x,0.39,0);
+    workerPart(new THREE.BoxGeometry(0.22,0.16,0.34),workerBoot,x,0.085,0.065);
+  });
+  workerPart(new THREE.CylinderGeometry(0.24,0.20,0.64,12),workerVest,0,1.00,0);
+  workerPart(new THREE.BoxGeometry(0.46,0.075,0.04),workerReflect,0,1.06,0.203);
+  workerPart(new THREE.CylinderGeometry(0.075,0.075,0.15,10),workerSkin,0,1.39,0);
+  workerPart(new THREE.SphereGeometry(0.19,14,10),workerSkin,0,1.55,0);
+  [-1,1].forEach(side=>{
+    const arm=workerPart(new THREE.CylinderGeometry(0.075,0.085,0.55,10),workerVest,side*0.30,1.00,0);
+    arm.rotation.z=side*0.13;
+    workerPart(new THREE.SphereGeometry(0.075,10,8),workerSkin,side*0.34,0.69,0);
+  });
+  workerPart(new THREE.SphereGeometry(0.22,14,10,0,Math.PI*2,0,Math.PI/2),workerHelmet,0,1.67,0);
+  workerPart(new THREE.CylinderGeometry(0.245,0.245,0.045,16),workerHelmet,0,1.65,0);
+  // Situado sobre un tramo despejado de la pasarela, separado del pozo central.
+  worker.position.set(0,walkY+0.06,r*0.58);
+  tankGroup.add(worker);
+
   controls3d.target.set(0, TANK_STAND_H + hopperH + wallH/2, 0);
 drawFlowArrows(D);
+  addComponentHotspots(r,hopperH,wallH,effluentPipe.position.x);
+  if(settlingParticles)settlingParticles.visible=vizLayers.particles;
+  if(troughFlowParticles)troughFlowParticles.visible=vizLayers.flow;
+  if(flowArrowsGroup)flowArrowsGroup.visible=vizLayers.flow;
+  if(scraperGroup)scraperGroup.visible=vizLayers.scraper;
+  syncVizScenario();
 }
 function makeFlowMarker(color){
   const geo = new THREE.ConeGeometry(0.22, 0.55, 12);
@@ -2216,9 +2369,9 @@ function calc(){
   const slrMin = parseFloat(document.getElementById('slrMin').value);
   const slrMax = parseFloat(document.getElementById('slrMax').value);
 
-  document.getElementById('sorVal').textContent = fmt(sor,1)+' m³/m²·día';
-  document.getElementById('wlrVal').textContent = fmt(wlr,1)+' m³/m·día';
-  document.getElementById('slrVal').textContent = fmt(slr,1)+' kg/m²·día';
+  document.getElementById('sorVal').textContent = fmt(sor,1);
+  document.getElementById('wlrVal').textContent = fmt(wlr,1);
+  document.getElementById('slrVal').textContent = fmt(slr,1);
 
   const sorSt = status(sor, sorMin, sorMax);
   const wlrSt = status(wlr, wlrMin, wlrMax);
@@ -2241,6 +2394,7 @@ function calc(){
  document.getElementById('eqSlr').innerHTML = `<span class="sed-substitution">${fmt(Q,0)} × ${fmt(C/1000,2)} / ${fmt(area,1)}</span><span class="sed-result">${fmt(slr,1)} kg/m²·día</span>`;
 
   drawPlan(D, wlrSt.cls);
+  syncVizScenario();
 }
 
 function downloadSourceCode() {
@@ -2263,95 +2417,76 @@ function downloadSourceCode() {
    actualiza automáticamente en AMBOS documentos descargables.
    ================================================================ */
 function buildGuideContent(isRelave){
-
-  const competencia = 'Aplica principios y fundamentos de las ciencias de la ingeniería para analizar, diseñar y evaluar procesos de separación sólido-líquido, integrando criterios técnicos, operacionales y de sustentabilidad en contextos reales de tratamiento de aguas y de la industria minera.';
-
-  const comoUsar = `Esta guía fue creada para que se trabaje usando el simulador en el navegador como una herramienta de aprendizaje. Cada actividad pide modificar una variable específica: el caudal, el diámetro o el SST. Luego hay que leer un valor exacto del panel "Ecuaciones en vivo", observar un cambio de color en el modelo 3D, o usar los botones de modo y "Vista en corte". Las respuestas no se pueden obtener con una calculadora aparte o buscando en internet, ya que dependen de lo que observes tú con el simulador. Actualmente el simulador está en <strong>modo ${isRelave ? 'espesador de relave' : 'clarificador de agua'}</strong>.`;
-
+  const competencia = 'Analiza el funcionamiento y los criterios básicos de diseño de sedimentadores circulares, relacionando la geometría, el caudal y la concentración de sólidos con indicadores hidráulicos y de carga de sólidos, y reconociendo las limitaciones del modelo.';
+  const comoUsar = `Trabaja con el simulador abierto. Introduce los valores directamente en los campos numéricos del panel «Escenario» (no hay barras deslizantes). Modifica únicamente la variable indicada en cada ensayo, registra SOR, WLR y SLR, observa el modelo 3D y explica los resultados. Puedes verificar los cálculos con una calculadora. Los colores y el manto de sólidos son representaciones didácticas, no una predicción física de remoción o de altura real del lodo. Modo inicial: <strong>${isRelave ? 'espesador de relave' : 'clarificador de agua'}</strong>.`;
   const mode = isRelave ? {
-    tituloProceso: 'Espesador de Relaves Mineros',
-    asignaturas: 'Procesamiento de Minerales, Geotecnia de Relaves, Operaciones Unitarias.',
-    objetivos: [
-      'Analizar la influencia del caudal de pulpa (Q), el diámetro del espesador y la concentración de sólidos sobre el desempeño del espesamiento de relaves.',
-      'Interpretar los parámetros de diseño SOR, WLR y SLR como indicadores de operación de un espesador convencional de relaves.',
-      'Relacionar los principios de sedimentación con la gestión de relaves mineros: recuperación de agua de proceso y disposición del relave espesado.',
-      'Evaluar alternativas de diseño geométrico frente a escenarios de aumento de producción de la faena.'
-    ],
-    fuente: 'Wills\' Mineral Processing Technology (Wills &amp; Finch, 2016).'
+    tituloProceso:'Espesador de Relaves Mineros', asignaturas:'Procesamiento de Minerales, Operaciones Unitarias y Gestión de Relaves',
+    objetivos:['Identificar el recorrido del fluido y la función de los componentes de un espesador circular.','Analizar cómo Q, D y SST modifican SOR, WLR y SLR.','Comparar indicadores y criterios de referencia entre clarificación de aguas y espesamiento de relaves.','Proponer y justificar alternativas de diseño reconociendo los límites del modelo.'],
+    fuente:'Wills y Finch (2016), Wills’ Mineral Processing Technology (referencia general; los rangos del simulador deben verificarse para cada aplicación).'
   } : {
-    tituloProceso: 'Sedimentador Circular — Clarificador de Aguas Residuales',
-    asignaturas: 'Ingeniería Sanitaria, Tratamiento de Aguas Servidas, Mecánica de Fluidos.',
-    objetivos: [
-      'Analizar la influencia del caudal (Q), el diámetro del sedimentador y la concentración de sólidos sobre el desempeño del proceso de sedimentación.',
-      'Interpretar los parámetros de diseño SOR, WLR y SLR como indicadores de operación de un clarificador secundario.',
-      'Relacionar los principios de separación sólido-líquido con el tratamiento de aguas residuales, evaluando condiciones operativas críticas.',
-      'Proponer soluciones técnicas de rediseño geométrico u operativo ante fallas de clarificación.'
-    ],
-    fuente: 'Metcalf &amp; Eddy / Tchobanoglous et al. (2014), <em>Wastewater Engineering: Treatment and Resource Recovery</em>, 5.ª ed.'
+    tituloProceso:'Sedimentador Circular — Clarificador de Aguas Residuales', asignaturas:'Ingeniería Sanitaria, Tratamiento de Aguas y Operaciones Unitarias',
+    objetivos:['Identificar el recorrido del fluido y la función de los componentes de un clarificador circular.','Analizar cómo Q, D y SST modifican SOR, WLR y SLR.','Comparar indicadores y criterios de referencia entre clarificación de aguas y espesamiento de relaves.','Proponer y justificar alternativas de diseño reconociendo los límites del modelo.'],
+    fuente:'Metcalf & Eddy / Tchobanoglous et al. (2014), Wastewater Engineering: Treatment and Resource Recovery (referencia general; verificar los rangos para cada caso).'
   };
-
-  // ---- Actividad 1: sensibilidad hidráulica (Q) — RA1, RA2 ----
   const act1 = isRelave ? {
-    titulo: 'Actividad 1 — Sensibilidad Hidráulica del Espesador (RA1, RA2)',
-    instruccion: 'En el simulador (modo espesador de relave), fija Diámetro = 18.0 m y SST = 2.800 mg/L. Sube el Caudal (Q) en pasos de 500 m³/día, partiendo de 1.500 hasta 6.000. En cada paso, copia del panel "Ecuaciones en vivo" la ecuación de SOR con los números sustituidos, y registra el color del anillo del vertedero en el modelo 3D.',
-    tablaHeaders: ['Q (m³/día)', 'Ecuación SOR (con números)', 'Estado SOR', 'Color anillo vertedero'],
-    tablaFilas: 6,
-    consigna: '¿A qué caudal aproximado el estado de SOR cambia a "alto"? Compara ese valor con el que obtendrías en modo clarificador de agua (misma D). ¿Por qué un espesador de relaves debe operar a cargas superficiales mucho menores?',
-    notaDocente: 'Con D=18 m y SOR máx=15 m³/m²·día, el umbral teórico es de Q≈3.817 m³/día, dentro del rango explorado. En modo clarificador de agua, con la misma D, el umbral sube a Q≈8.143 m³/día (SOR máx=32). La brecha ilustra que los flóculos minerales/relave requieren mucha más área por unidad de caudal que el lodo biológico.'
-  } : {
-    titulo: 'Actividad 1 — Caudal Crítico e Hidráulica (RA1, RA2)',
-    instruccion: 'En el simulador (modo clarificador de agua), fija Diámetro = 18.0 m y SST = 2.800 mg/L. Sube el Caudal (Q) en pasos de 1.000 m³/día, partiendo de 4.000 hasta 10.000. En cada paso, copia del panel "Ecuaciones en vivo" la ecuación de SOR con los números sustituidos, y registra el color del anillo del vertedero en el modelo 3D.',
-    tablaHeaders: ['Q (m³/día)', 'Ecuación SOR (con números)', 'Estado SOR', 'Color anillo vertedero'],
-    tablaFilas: 7,
-    consigna: '¿A qué caudal exacto el estado de SOR cambia a "alto"? ¿Qué parámetro entra en estado "alto" primero, SOR o WLR? Explica la razón geométrica (relación área vs. perímetro).',
-    notaDocente: 'Con D=18 m, el área es de aproximadamente 254 m² y el perímetro de 56.5 m. El SOR máximo (32) da un caudal crítico de Q≈8.143 m³/día, mientras que el WLR máximo (250) da Q≈14.137 m³/día, fuera del rango explorado. El SOR limita primero porque el área crece con D² mientras el perímetro solo crece con D.'
-  };
+    titulo:'Actividad 1 — Influencia del caudal en el espesador',
 
-  // ---- Actividad 2: sobrecarga de sólidos (SST) — RA2 ----
+    instruccion:'Selecciona «Espesador de relave». Ingresa D = 18 m y SST = 2.800 mg/L. Ensaya Q = 1.500, 2.000, 2.500, 3.000, 3.500, 4.000, 4.500, 5.000, 5.500 y 6.000 m³/día. Registra los resultados numéricos y el estado de SOR; observa la indicación visual del modelo.',
+    tablaHeaders:['Q (m³/día)','SOR (m³/m²·día)','WLR (m³/m·día)','Estado SOR'],
+    valores:[1500,2000,2500,3000,3500,4000,4500,5000,5500,6000],
+    consigna:'Calcula el área del tanque y estima el caudal al que SOR supera su máximo de referencia. Explica por qué los valores de SOR y WLR crecen al aumentar Q.',
+    notaDocente:'A = π(18²)/4 ≈ 254,47 m². Con SOR máx. de referencia = 15, Q umbral ≈ 3.817 m³/día. La clasificación del resultado depende de la comparación con el límite de referencia configurado.'
+  } : {
+    titulo:'Actividad 1 — Influencia del caudal en el clarificador',
+
+    instruccion:'Selecciona «Clarificador de agua». Ingresa D = 18 m y SST = 2.800 mg/L. Ensaya Q = 4.000, 5.000, 6.000, 7.000, 8.000, 9.000 y 10.000 m³/día. Registra SOR, WLR y el estado de SOR.',
+    tablaHeaders:['Q (m³/día)','SOR (m³/m²·día)','WLR (m³/m·día)','Estado SOR'],
+    valores:[4000,5000,6000,7000,8000,9000,10000],
+    consigna:'Calcula el área y el perímetro del tanque. Estima el caudal al que SOR supera su máximo de referencia y compara con el umbral de WLR. Explica la tendencia observada.',
+    notaDocente:'A ≈ 254,47 m²; P ≈ 56,55 m. Para SOR máx. = 32, Q umbral ≈ 8.143 m³/día. Para WLR máx. = 250, Q umbral ≈ 14.137 m³/día (fuera del rango ensayado).'
+  };
   const act2 = isRelave ? {
-    titulo: 'Actividad 2 — Relación entre SOR y SLR en un Espesador (RA2)',
-    instruccion: 'Fija Q = 5.000 m³/día y D = 16.0 m (modo espesador de relave). Mueve el deslizador de SST entre 1.500 y 6.000 mg/L, observando en cada extremo el estado de SOR y de SLR en el panel de Resultados.',
-    tablaHeaders: ['SST (mg/L)', 'Estado SOR', 'Ecuación SLR (con números)', 'Estado SLR'],
-    tablaFilas: 5,
-    consigna: 'Es muy probable que observes que SOR ya está en estado "alto" incluso con el SST más bajo, y que SLR nunca llega a "alto" dentro del rango del simulador. Matemáticamente, SLR = SOR × (SST en kg/m³). Si el SST máximo del simulador es 6 kg/m³, ¿qué tan grande tendría que ser el SOR para que el SLR alcance por sí solo su máximo de diseño (350 kg/m²·día)? Compara ese valor con el SOR máximo permitido (15 m³/m²·día) y explica qué te dice esto sobre cuál parámetro es realmente crítico al diseñar un espesador de relaves.',
-    notaDocente: 'Se necesitaría SOR≈58 m³/m²·día para que SLR llegue a 350 con SST=6 kg/m³, casi 4 veces el SOR máximo permitido que es de 15. Esto expone, dentro del rango de concentraciones que permite el slider (pensado en unidades de aguas residuales), que el parámetro limitante real en este simulador es el SOR y no el SLR. Es una simplificación intencional: en un espesador minero real, con pulpas de decenas de miles de mg/L, la relación se invierte. Vale la pena discutirlo abiertamente con el curso.'
-  } : {
-    titulo: 'Actividad 2 — Sobrecarga de Sólidos (RA2)',
-    instruccion: 'Fija Q = 5.000 m³/día y D = 16.0 m (modo clarificador de agua). Mueve el deslizador de SST entre 1.500 y 6.000 mg/L. En cada paso, copia la ecuación de SLR con los números sustituidos y registra el estado.',
-    tablaHeaders: ['SST (mg/L)', 'Ecuación SLR (con números)', 'Estado SLR'],
-    tablaFilas: 5,
-    consigna: '¿En qué concentración de SST aproximada el estado de SLR cambia a "alto"? ¿Qué consecuencia física tendría esta condición sobre el barredor de fondo del sedimentador?',
-    notaDocente: 'Con Q=5.000 m³/día, D=16 m (Área≈201 m²) y SLR máx=140 kg/m²·día, el umbral teórico es SST≈5.630 mg/L, lo cual está dentro del rango explorado, de 1.500 a 6.000.'
-  };
+    titulo:'Actividad 2 — Influencia de la concentración de sólidos',
 
-  // ---- Actividad 3: comparación entre modos — RA3 (idéntica en ambos casos, solo cambia el punto de partida) ----
+    instruccion:'En modo relave, ingresa Q = 5.000 m³/día y D = 16 m. Introduce SST = 1.500, 2.500, 3.500, 4.500 y 6.000 mg/L. Registra SOR y SLR, con sus estados.',
+    tablaHeaders:['SST (mg/L)','SOR (m³/m²·día)','SLR (kg/m²·día)','Estado SLR'],
+    valores:[1500,2500,3500,4500,6000],
+    consigna:'Explica por qué SOR no cambia aunque aumente SST. Convierte 6.000 mg/L a kg/m³ y comprueba un cálculo de SLR. ¿Por qué estos valores de concentración no representan muchas pulpas mineras reales?',
+    notaDocente:'El simulador limita SST a 6.000 mg/L = 6 kg/m³; muchas pulpas mineras presentan concentraciones muy superiores. SOR = 5000/[π(16²)/4] ≈ 24,87, independiente de SST. No extrapolar la representación del manto a espesamiento real.'
+  } : {
+    titulo:'Actividad 2 — Influencia de la concentración de sólidos',
+
+    instruccion:'En modo agua, ingresa Q = 5.000 m³/día y D = 16 m. Introduce SST = 1.500, 2.500, 3.500, 4.500 y 6.000 mg/L. Registra SOR y SLR, con sus estados.',
+    tablaHeaders:['SST (mg/L)','SOR (m³/m²·día)','SLR (kg/m²·día)','Estado SLR'],
+    valores:[1500,2500,3500,4500,6000],
+    consigna:'Explica por qué SOR permanece constante y SLR aumenta. Calcula la concentración aproximada para la cual SLR supera el máximo de referencia y señala qué información adicional sería necesaria para estimar la remoción real.',
+    notaDocente:'A ≈ 201,06 m²; SOR ≈ 24,87. Con SLR máx. = 140, concentración umbral ≈ 5.630 mg/L. El simulador no calcula la eficiencia de captura ni el esfuerzo mecánico del barredor.'
+  };
   const act3 = {
-    titulo: 'Actividad 3 — Comparación entre Modo Agua y Modo Relave (RA3)',
-    instruccion: `Deja los controles en sus valores por defecto (Q=4.200 m³/día, D=18.0 m, SST=2.800 mg/L) sin modificarlos. Registra el estado de SOR/WLR/SLR en el modo actual (${isRelave ? 'espesador de relave' : 'clarificador de agua'}). Luego presiona el botón del modo opuesto. Vuelve a registrar los tres estados. Abre "Valores de diseño de referencia" y anota los rangos numéricos que cambiaron automáticamente. Finalmente, activa "Vista en corte" y compara la altura y el color del manto de sólidos entre ambos modos.`,
-    tablaHeaders: ['Aspecto observado', 'Modo clarificador de agua', 'Modo espesador de relave'],
-    tablaFilas: 6,
-    consigna: '¿Por qué el mismo caudal de 4.200 m³/día, que resulta aceptable para un clarificador de agua, provoca sobrecarga en un espesador de relave? ¿Qué te dice esto sobre las diferencias físicas entre un lodo biológico y un relave mineral? Cita la fuente bibliográfica que aparece en el panel de referencia de cada modo.',
-    notaDocente: 'Con los valores por defecto, en modo clarificador de agua se obtiene SOR≈16.5 (ok, borde bajo), WLR≈74.3 (bajo) y SLR≈46.2 (bajo): un diseño conservador. En modo relave, el mismo caudal da SOR≈16.5, que ya supera el máximo de relave (15) y queda en estado "alto", mientras WLR (74.3) queda "ok" y SLR (46.2) "bajo". El contraste es deliberado y no requiere mover ningún slider, solo cambiar de modo.'
-  };
+    titulo:'Actividad 3 — Comparación entre agua y relaves',
 
-  // ---- Actividad 4: desafío de diseño — RA4 ----
+    instruccion:'Ingresa Q = 4.200 m³/día, D = 18 m y SST = 2.800 mg/L. Registra los tres valores y estados en modo agua. Cambia a modo relave y vuelve a registrar. Consulta «Valores de diseño de referencia» en ambos modos y activa «Vista en corte».',
+    tablaHeaders:['Indicador o aspecto','Modo agua','Modo relave'],
+    valores:['SOR (valor y estado)','WLR (valor y estado)','SLR (valor y estado)','SOR mín./máx. de referencia','SLR mín./máx. de referencia','Representación del manto'],
+    consigna:'¿Por qué las cifras de SOR, WLR y SLR permanecen iguales si Q, D y SST no cambian? ¿Por qué pueden cambiar sus etiquetas de estado? Distingue entre un resultado calculado y una animación ilustrativa.',
+    notaDocente:'Las fórmulas no dependen del modo; solo cambian rangos de referencia y elementos visuales. SOR ≈ 16,51; WLR ≈ 74,27; SLR ≈ 46,21. No interpretar el manto como predicción de altura real.'
+  };
   const act4 = isRelave ? {
-    titulo: 'Actividad 4 — Desafío de Diseño: Expansión de una Faena Minera (RA4)',
-    instruccion: 'Una planta concentradora debe aumentar su producción, pasando de un caudal de relave de 1.800 a 3.200 m³/día, manteniendo la concentración de sólidos en 3.000 mg/L (modo espesador de relave).',
-    consigna: 'Usando el simulador, determina el diámetro mínimo (D) necesario para que los 3 parámetros permanezcan en estado "ok". Justifica tu propuesta indicando los valores de SOR, WLR y SLR obtenidos, y qué ensayo de laboratorio (Coe-Clevenger / Kynch) sería necesario para validar este diseño en la práctica real.',
-    notaDocente: 'Para SLR≤350 y Q=3.200, C=3 kg/m³: Área≥3200*3/350≈27.4 m² → D≥5.9 m (no limitante). Para SOR≤15: Área≥3200/15≈213 m² → D≥16.5 m. Este último es el que gobierna: D mínimo≈16.5–17 m.'
+    titulo:'Actividad 4 — Desafío de diseño: ampliación minera',
+
+    instruccion:'Una faena proyecta Q = 3.200 m³/día y SST = 3.000 mg/L. Trabaja en modo relave. Estima primero el diámetro mínimo para no superar SOR máx. = 15; comprueba el resultado en el simulador y revisa también WLR y SLR.',
+    consigna:'Determina un diámetro que cumpla el límite superior de SOR y comprueba qué sucede con los otros indicadores. ¿Es posible lograr que los tres estén simultáneamente en «ok» modificando solo D? Si no, demuestra por qué y propone qué información o cambios de modelo se necesitarían.',
+    notaDocente:'Para SOR≤15, D≥√(4·3200/(π·15))≈16,48 m. Pero SLR=SOR·3 kg/m³≤45 kg/m²·día, inferior al mínimo de referencia 150. Por tanto NO existe D que produzca simultáneamente tres estados «ok» con esos Q y SST. La tarea correcta es detectar esta incompatibilidad y no inventar un diámetro.'
   } : {
-    titulo: 'Actividad 4 — Desafío de Diseño: Expansión de Planta Tratadora (RA4)',
-    instruccion: 'Una PTAR necesita aumentar su capacidad de tratamiento debido a un aumento poblacional, pasando de 4.200 a 7.500 m³/día, manteniendo los SST en 3.000 mg/L (modo clarificador de agua).',
-    consigna: 'Usando el simulador, determina el diámetro mínimo (D) necesario para que los 3 parámetros permanezcan en estado "ok". Justifica tu propuesta con los valores de SOR, WLR y SLR obtenidos, e indica qué ocurriría si se mantuviera el diámetro original de 18.0 m.',
-    notaDocente: 'Para SOR≤32: Área≥7500/32≈234.4 m² → D≥17.3 m. Para SLR≥96 (mínimo, no crítico aquí) y ≤140: Área≥7500*3/140≈160.7 m² → D≥14.3 m (no limitante). D mínimo≈17.3–18 m: con el diámetro original de 18 m el sistema queda apenas dentro de rango.'
+    titulo:'Actividad 4 — Desafío de diseño: ampliación de una PTAR',
+
+    instruccion:'Una PTAR proyecta Q = 7.500 m³/día y SST = 3.000 mg/L. Trabaja en modo agua. Estima primero el diámetro mínimo para no superar SOR máx. = 32; comprueba en el simulador y revisa WLR y SLR.',
+    consigna:'Calcula y verifica un diámetro que respete los límites superiores. Luego analiza si los tres indicadores pueden quedar simultáneamente en «ok» con los límites inferiores y superiores del simulador. Compara con D = 18 m y justifica las diferencias.',
+    notaDocente:'SOR≤32 exige D≥√(4·7500/(π·32))≈17,27 m. Como SLR=3·SOR y el mínimo SLR es 96, para «ok» se necesita SOR≥32; combinado con SOR≤32 solo hay igualdad exacta en D≈17,27 m. Con D=18 m, SOR≈29,47 (ok), WLR≈132,63 (ok), SLR≈88,42 (bajo). Explicar que «bajo» no significa necesariamente falla física.'
   };
-
-  const reflexion = 'El mismo criterio de diseño de la sedimentación gravitacional se aplica tanto a la potabilización del agua como a la gestión de relaves de una faena minera. ¿Qué responsabilidades técnicas y éticas asume un ingeniero o ingeniera al diseñar estos sistemas, considerando que una falla operacional puede afectar tanto la salud pública como el entorno ambiental?';
-
-  return { competencia, comoUsar, mode, act1, act2, act3, act4, reflexion, isRelave };
+  const reflexion='¿Qué decisiones de diseño pueden justificarse con SOR, WLR y SLR y cuáles requieren ensayos de sedimentación, caracterización de sólidos y datos operacionales? Considera las consecuencias ambientales y sociales de una decisión mal fundamentada.';
+  return {competencia,comoUsar,mode,act1,act2,act3,act4,reflexion,isRelave};
 }
-
 
 /* ================================================================
    GUÍA DEL DOCENTE — incluye notas de apoyo y rúbrica
@@ -2367,8 +2502,8 @@ function downloadTeacherGuide() {
   const rubricaRows = [
     { criterio: 'RA1 — Sensibilidad hidráulica', insuf: 'No identifica el caudal donde ocurre sobrecarga, o los valores registrados no coinciden con el simulador.', sufic: 'Identifica el caudal de sobrecarga con apoyo, sin explicar la causa geométrica.', bueno: 'Identifica correctamente el caudal crítico y explica de forma parcial la relación entre área/perímetro.', excel: 'Identifica el caudal crítico con precisión y explica con claridad la razón geométrica de por qué SOR o WLR fallan primero.' },
     { criterio: 'RA2 — Interpretación SOR/WLR/SLR', insuf: 'Confunde el significado físico de los parámetros o no logra explicarlos.', sufic: 'Explica el significado de cada parámetro de forma básica, con imprecisiones.', bueno: 'Explica correctamente qué representa cada parámetro y menciona alguna consecuencia de excederlo.', excel: 'Explica con precisión el significado físico de los tres parámetros, su relación matemática y sus consecuencias operativas.' },
-    { criterio: 'RA3 — Comparación agua/relave', insuf: 'No logra explicar por qué difieren los resultados entre modos.', sufic: 'Reconoce que los resultados difieren, sin justificar la causa física.', bueno: 'Explica correctamente la diferencia entre modos citando al menos un factor físico.', excel: 'Explica con solidez la diferencia entre modos, cita ambas fuentes bibliográficas y relaciona con las limitaciones del modelo.' },
-    { criterio: 'RA4 — Desafío de diseño', insuf: 'No logra proponer un diámetro que cumpla los tres parámetros en rango.', sufic: 'Propone un diámetro válido por ensayo-error, sin justificación técnica.', bueno: 'Propone un diámetro válido y justifica su elección con los valores de SOR/WLR/SLR obtenidos.', excel: 'Propone un diámetro válido, lo justifica técnicamente y reconoce qué información adicional (ensayos, normativa local) se requeriría en un diseño real.' },
+    { criterio: 'RA3 — Comparación agua/relave', insuf: 'No distingue valores calculados, estados de referencia y elementos visuales.', sufic: 'Reconoce cambios de estado sin explicar los rangos de referencia.', bueno: 'Explica que los valores calculados se conservan y que cambian los rangos de referencia.', excel: 'Compara valores y rangos, distingue visualización ilustrativa de cálculo y discute límites y fuentes.' },
+    { criterio: 'RA4 — Desafío de diseño', insuf: 'No realiza cálculos ni comprueba la factibilidad de las restricciones.', sufic: 'Ensaya un diámetro, pero no analiza todos los límites ni la factibilidad.', bueno: 'Calcula un diámetro y analiza SOR/WLR/SLR, reconociendo incompatibilidades si aparecen.', excel: 'Verifica matemáticamente la factibilidad de todos los límites, justifica la solución o imposibilidad y señala los datos adicionales necesarios.' },
     { criterio: 'Reflexión final', insuf: 'No responde o la respuesta no aborda la pregunta planteada.', sufic: 'Responde de forma superficial, sin argumentar.', bueno: 'Responde con argumentos razonables, considerando al menos un aspecto técnico y uno ético/social.', excel: 'Responde con argumentación sólida, integrando aspectos técnicos, éticos y de responsabilidad profesional.' }
   ];
   const rubricaHTML = rubricaRows.map(r => `
@@ -2384,8 +2519,8 @@ function downloadTeacherGuide() {
     return `
       <div style="font-size: 11px; margin-bottom: 12px; page-break-inside: avoid;">
         <strong>${a.titulo}</strong><br>
-        ${a.instruccion}<br>
-        <em>Consigna:</em> ${a.consigna}
+        <em>Procedimiento:</em> ${a.instruccion}<br>
+        <em>Análisis:</em> ${a.consigna}
         <div style="background:#FDF0D2; border-left:3px solid #F9B614; margin-top:5px; padding:5px 8px; font-size:9.5px; color:#5B4A00;">
           <strong>Nota para el docente:</strong> ${a.notaDocente}
         </div>
@@ -2415,7 +2550,7 @@ function downloadTeacherGuide() {
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 10.5px; background: #F7FAF9; border: 1px solid #C6D3CE;">
         <tr>
           <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Asignaturas:</strong> ${c.mode.asignaturas}</td>
-          <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Duración estimada:</strong> 90 minutos.</td>
+          <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Duración estimada:</strong> 90–120 minutos.</td>
         </tr>
         <tr>
           <td style="padding: 7px 10px; border: 1px solid #C6D3CE;"><strong>Modalidad:</strong> Individual o en parejas.</td>
@@ -2431,11 +2566,12 @@ function downloadTeacherGuide() {
       <div style="background: #EAF0EE; padding: 8px 12px; border-radius: 5px; font-size: 10.5px;">
         <p style="margin: 2px 0;">• <strong>SOR</strong> = Q / A_s = Q / [π · (D/2)²] &nbsp;<em>[m³/m²·día]</em></p>
         <p style="margin: 2px 0;">• <strong>WLR</strong> = Q / (π · D) &nbsp;<em>[m³/m·día]</em></p>
-        <p style="margin: 2px 0;">• <strong>SLR</strong> = (Q · SST) / A_s &nbsp;<em>[kg/m²·día]</em></p>
+        <p style="margin: 2px 0;">• <strong>SLR</strong> = [Q · (SST/1000)] / A_s &nbsp;<em>[kg/m²·día], con SST en mg/L</em></p>
         <p style="margin: 4px 0 0; font-size: 9px; color: #5B6B67;">Fuente de los valores de referencia: ${c.mode.fuente}</p>
       </div>
 
       <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 16px 0 8px 0;">3. Actividades Prácticas Guiadas</h2>
+      <div style="background:#F1F6F7;padding:9px 12px;font-size:10px;margin-bottom:12px;"><strong>Orientación docente:</strong> Comenzar identificando alimentación, vertedero y fondo en el modelo 3D. En cada actividad seguir «predecir → experimentar → registrar → calcular → explicar». Los estados «bajo/ok/alto» son comparaciones con rangos de referencia, no un diagnóstico integral de desempeño. La representación del manto es ilustrativa. Comprobar siempre la coherencia de unidades (SST/1000 en kg/m³).</div>
       ${actividadDocenteHTML(c.act1)}
       ${actividadDocenteHTML(c.act2)}
       ${actividadDocenteHTML(c.act3)}
@@ -2498,19 +2634,15 @@ function downloadStudentGuide() {
   }
 
   function actividadEstudianteHTML(a){
-    const headerRow = a.tablaHeaders.map(h => `<th style="padding:5px 6px; border:1px solid #C6D3CE; background:#1B4B63; color:#fff; text-align:left; font-size:9px;">${h}</th>`).join('');
+    const headerRow = a.tablaHeaders.map(h => `<th style="padding:6px;border:1px solid #C6D3CE;background:#1B4B63;color:#fff;text-align:left;font-size:9px;">${h}</th>`).join('');
+    const rows = a.valores.map(v => `<tr><td style="border:1px solid #C6D3CE;padding:7px;font-weight:bold;">${v.toLocaleString ? v.toLocaleString('es-CL') : v}</td>${Array(a.tablaHeaders.length-1).fill('<td style="border:1px solid #C6D3CE;padding:7px;height:15px;">&nbsp;</td>').join('')}</tr>`).join('');
     return `
-      <div style="font-size: 11px; margin-bottom: 6px; page-break-inside: avoid;">
-        <strong>${a.titulo}</strong><br>
-        ${a.instruccion}
-      </div>
-      <table style="width:100%; border-collapse:collapse; margin-bottom:8px; font-size:9px;">
-        <thead><tr>${headerRow}</tr></thead>
-        <tbody>${blankRows(a.tablaHeaders.length, a.tablaFilas)}</tbody>
-      </table>
-      <p style="font-size:11px; margin:0 0 4px;"><em>Consigna:</em> ${a.consigna}</p>
-      <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">${blankRows(1,3)}</table>
-    `;
+      <div style="font-size:11px;margin:12px 0 7px;page-break-inside:avoid;"><strong>${a.titulo}</strong></div>
+      <p style="font-size:10.5px;margin:0 0 8px;"><strong>1. Experimenta y registra:</strong> ${a.instruccion}</p>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:8px;font-size:9px;page-break-inside:avoid;"><thead><tr>${headerRow}</tr></thead><tbody>${rows}</tbody></table>
+      <p style="font-size:10.5px;margin:0 0 4px;"><strong>2. Calcula y explica:</strong> ${a.consigna}</p>
+      <p style="font-size:10px;color:#526; margin:0 0 5px;">Desarrolla manualmente un cálculo representativo, incluye sus unidades y explica la relación entre los parámetros y los resultados observados.</p>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:14px;">${blankRows(1,3)}</table>`;
   }
 
   const guideHTML = `
@@ -2535,9 +2667,11 @@ function downloadStudentGuide() {
 
       <table style="width:100%; border-collapse:collapse; margin-bottom:16px; font-size:10.5px;">
         <tr>
-          <td style="padding:5px 0; width:33%;"><strong>Nombre:</strong> ______________________</td>
-          <td style="padding:5px 0; width:33%;"><strong>Curso:</strong> ______________________</td>
-          <td style="padding:5px 0; width:34%;"><strong>Fecha:</strong> ______________________</td>
+          <td colspan="2" style="padding:7px 0 12px;"><strong>Nombre completo:</strong> <span style="display:inline-block;vertical-align:bottom;border-bottom:1px solid #536B77;width:75%;height:17px;">&nbsp;</span></td>
+        </tr>
+        <tr>
+          <td style="padding:5px 0; width:55%;"><strong>Curso:</strong> ______________________________</td>
+          <td style="padding:5px 0; width:45%;"><strong>Fecha:</strong> _______________________</td>
         </tr>
       </table>
 
@@ -2548,12 +2682,38 @@ function downloadStudentGuide() {
       <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 14px 0 6px 0;">Cómo usar esta guía</h2>
       <p style="font-size:10.5px; margin:0 0 10px;">${c.comoUsar}</p>
 
+      <h2 style="font-size:13px;color:#1B4B63;border-left:4px solid #2E6E8E;padding-left:8px;margin:14px 0 6px;">Antes de comenzar: conoce el sedimentador</h2>
+      <p style="font-size:10.5px;margin:0 0 7px;">En el modelo 3D identifica: (a) entrada o alimentación, (b) zona de separación, (c) vertedero periférico y (d) zona de acumulación y retirada de sólidos. Activa «Vista en corte» para reconocer el interior.${isRelave ? '' : ' Describe en una frase el recorrido del agua y el destino de los sólidos.'}</p>
+
+      <p style="font-size:10px;background:#FDF0D2;border-left:3px solid #F9B614;padding:8px;margin:0 0 10px;"><strong>Importante:</strong> el modelo 3D ilustra el proceso. Las ecuaciones calculan indicadores de carga; no calculan eficiencia de remoción, velocidad de caída de partículas ni altura real del manto. Un estado «bajo» no significa necesariamente una falla.</p>
       <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 14px 0 8px 0;">Ecuaciones base</h2>
       <div style="background: #EAF0EE; padding: 8px 12px; border-radius: 5px; font-size: 10.5px; margin-bottom:14px;">
         <p style="margin: 2px 0;">• <strong>SOR</strong> = Q / A_s = Q / [π · (D/2)²] &nbsp;<em>[m³/m²·día]</em></p>
         <p style="margin: 2px 0;">• <strong>WLR</strong> = Q / (π · D) &nbsp;<em>[m³/m·día]</em></p>
-        <p style="margin: 2px 0;">• <strong>SLR</strong> = (Q · SST) / A_s &nbsp;<em>[kg/m²·día]</em></p>
+        <p style="margin: 2px 0;">• <strong>SLR</strong> = [Q · (SST/1000)] / A_s &nbsp;<em>[kg/m²·día], con SST en mg/L</em></p>
       </div>
+
+
+      <h2 style="font-size:13px;color:#1B4B63;border-left:4px solid #2E6E8E;padding-left:8px;margin:14px 0 7px;">Comprendiendo los indicadores de diseño</h2>
+      <p style="font-size:10.5px;margin:0 0 7px;">Antes de experimentar, reconoce qué mide cada indicador. <strong>SOR y WLR expresan cargas hidráulicas</strong>; <strong>SLR expresa la carga de sólidos</strong>. Estos valores ayudan a evaluar condiciones de diseño, pero no calculan por sí solos la eficiencia de remoción.</p>
+      <table style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:9px;page-break-inside:avoid;">
+        <thead><tr style="background:#1B4B63;color:white;"><th style="padding:6px;border:1px solid #C6D3CE;">Indicador</th><th style="padding:6px;border:1px solid #C6D3CE;">¿Qué representa físicamente?</th><th style="padding:6px;border:1px solid #C6D3CE;">¿Qué ocurre si aumenta Q, con D y SST fijos?</th></tr></thead>
+        <tbody>
+          <tr><td style="border:1px solid #C6D3CE;padding:7px;"><strong>SOR</strong><br>Q / A<br>m³/(m²·día)</td><td style="border:1px solid #C6D3CE;padding:7px;">Volumen de alimentación que recibe diariamente cada m² de superficie horizontal del tanque.</td><td style="border:1px solid #C6D3CE;padding:7px;">Aumenta: la misma superficie recibe más caudal.</td></tr>
+          <tr><td style="border:1px solid #C6D3CE;padding:7px;"><strong>WLR</strong><br>Q / (πD)<br>m³/(m·día)</td><td style="border:1px solid #C6D3CE;padding:7px;">Volumen de agua que debe evacuar cada metro del vertedero perimetral por día.</td><td style="border:1px solid #C6D3CE;padding:7px;">Aumenta: cada metro de vertedero evacúa más caudal.</td></tr>
+          <tr><td style="border:1px solid #C6D3CE;padding:7px;"><strong>SLR</strong><br>Q · (SST/1000) / A<br>kg/(m²·día)</td><td style="border:1px solid #C6D3CE;padding:7px;">Masa de sólidos alimentada diariamente por cada m² de superficie del tanque.</td><td style="border:1px solid #C6D3CE;padding:7px;">Aumenta: ingresa más masa de sólidos por día.</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:10px;margin:0 0 8px;"><strong>Variables:</strong> Q = caudal (m³/día); D = diámetro (m); A = πD²/4 = área superficial (m²); SST = concentración de sólidos suspendidos (mg/L). Para SLR, SST/1000 convierte mg/L a kg/m³.</p>
+      <div style="background:#EDF5F7;border-left:3px solid #2E6E8E;padding:8px 10px;font-size:10px;margin:0 0 12px;page-break-inside:avoid;">
+        <strong>Ejemplo con Q = 4.200 m³/día, D = 18 m y SST = 2.800 mg/L:</strong><br>
+        A = π(18²)/4 = 254,47 m²;<br>
+        SOR = 4.200/254,47 = <strong>16,51 m³/(m²·día)</strong>;<br>
+        WLR = 4.200/(π · 18) = <strong>74,27 m³/(m·día)</strong>;<br>
+        SLR = [4.200 · (2.800/1000)]/254,47 = <strong>46,21 kg/(m²·día)</strong>.<br>
+        <strong>Interpretación:</strong> por cada m² de tanque se alimentan 16,51 m³/día de mezcla y 46,21 kg/día de sólidos; cada metro de vertedero evacua 74,27 m³/día de agua, suponiendo distribución uniforme.
+      </div>
+      <p style="font-size:10px;margin:0 0 10px;"><strong>Comprueba en el simulador:</strong> aumenta solo Q y observa los tres indicadores; luego restablece Q y aumenta solo SST. Explica por qué, en este segundo caso, cambia SLR pero SOR y WLR permanecen iguales.</p>
 
       <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 16px 0 10px 0; page-break-before: always; padding-top:10px;">Actividades</h2>
       ${actividadEstudianteHTML(c.act1)}
@@ -2563,9 +2723,9 @@ function downloadStudentGuide() {
       <div style="page-break-before: always; padding-top:10px;"></div>
       <div style="font-size: 11px; margin-bottom: 6px;">
         <strong>${c.act4.titulo}</strong><br>
-        ${c.act4.instruccion}
+        <strong>1. Calcula y verifica:</strong> ${c.act4.instruccion}
       </div>
-      <p style="font-size:11px; margin:0 0 4px;"><em>Desafío:</em> ${c.act4.consigna}</p>
+      <p style="font-size:11px; margin:0 0 4px;"><strong>2. Justifica:</strong> ${c.act4.consigna}</p>
       <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">${blankRows(1,6)}</table>
 
       <h2 style="font-size: 13px; color: #1B4B63; border-left: 4px solid #2E6E8E; padding-left: 8px; margin: 16px 0 8px 0;">Pregunta de reflexión final</h2>
